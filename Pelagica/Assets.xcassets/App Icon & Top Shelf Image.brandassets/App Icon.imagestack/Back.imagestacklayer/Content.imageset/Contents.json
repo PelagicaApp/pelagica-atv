@@ -1,12 +1,12 @@
 {
   "images" : [
     {
-      "filename" : "Pelagica tvOS Layer 1.png",
+      "filename" : "Pelagica tvOS Back@2x.png",
       "idiom" : "tv",
       "scale" : "1x"
     },
     {
-      "filename" : "Pelagica tvOS Layer 1@2x.png",
+      "filename" : "Pelagica tvOS Back@4x.png",
       "idiom" : "tv",
       "scale" : "2x"
     }
