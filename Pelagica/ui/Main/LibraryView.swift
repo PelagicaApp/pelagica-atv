@@ -16,27 +16,32 @@ struct LibraryView: View {
     private let columns = [GridItem(.adaptive(minimum: 380), spacing: 60)]
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 32) {
-                    Text("Libraries")
-                        .font(.system(size: 40, weight: .bold))
-                        .foregroundStyle(.white)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 32) {
+                        Text("Libraries")
+                            .font(.system(size: 40, weight: .bold))
+                            .foregroundStyle(.white)
 
-                    if let errorMessage {
-                        Text(errorMessage)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        LazyVGrid(columns: columns, spacing: 60) {
-                            ForEach(libraries, id: \.id) { library in
-                                LibraryCard(library: library)
+                        if let errorMessage {
+                            Text(errorMessage)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            LazyVGrid(columns: columns, spacing: 60) {
+                                ForEach(libraries, id: \.id) { library in
+                                    LibraryCard(library: library)
+                                }
                             }
                         }
                     }
+                    .padding(60)
                 }
-                .padding(60)
+            }
+            .navigationDestination(for: BaseItemDto.self) { library in
+                LibraryItemsView(library: library)
             }
         }
         .task { await loadLibraries() }
@@ -61,9 +66,7 @@ private struct LibraryCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Button {
-                // Browsing library isn't implemented yet
-            } label: {
+            NavigationLink(value: library) {
                 ZStack {
                     Color.white.opacity(0.06)
 
