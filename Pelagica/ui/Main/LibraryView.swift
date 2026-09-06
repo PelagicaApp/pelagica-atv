@@ -56,6 +56,8 @@ struct LibraryView: View {
 private struct LibraryCard: View {
     @EnvironmentObject private var appState: AppState
     let library: BaseItemDto
+    
+    private let cornerRadius: CGFloat = 20
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -72,7 +74,7 @@ private struct LibraryCard: View {
                         case .failure:
                             fallbackIcon
                         case .empty:
-                            ProgressView()
+                            SkeletonView()
                         @unknown default:
                             fallbackIcon
                         }
@@ -80,8 +82,8 @@ private struct LibraryCard: View {
                     .animation(nil, value: imageURL)
                 }
                 .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-                .contentShape(RoundedRectangle(cornerRadius: 20))
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                .contentShape(RoundedRectangle(cornerRadius: cornerRadius))
             }
             .buttonStyle(.card)
             
