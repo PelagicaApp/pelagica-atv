@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		3D72E953304D968900733911 /* JellyfinAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 3D72E952304D968900733911 /* JellyfinAPI */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		3D72E93D304D940200733911 /* Pelagica.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pelagica.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3D72E953304D968900733911 /* JellyfinAPI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = Pelagica;
 			packageProductDependencies = (
+				3D72E952304D968900733911 /* JellyfinAPI */,
 			);
 			productName = Pelagica;
 			productReference = 3D72E93D304D940200733911 /* Pelagica.app */;
@@ -94,6 +100,9 @@
 			);
 			mainGroup = 3D72E934304D940200733911;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				3D72E951304D968900733911 /* XCRemoteSwiftPackageReference "jellyfin-sdk-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3D72E93E304D940200733911 /* Products */;
 			projectDirPath = "";
@@ -256,6 +265,7 @@
 				DEVELOPMENT_TEAM = 7T2RLCKU8X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Pelagica looks for Jellyfin servers on your local network.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIUserInterfaceStyle = Automatic;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -285,6 +295,7 @@
 				DEVELOPMENT_TEAM = 7T2RLCKU8X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Pelagica looks for Jellyfin servers on your local network.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIUserInterfaceStyle = Automatic;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -326,6 +337,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		3D72E951304D968900733911 /* XCRemoteSwiftPackageReference "jellyfin-sdk-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/jellyfin/jellyfin-sdk-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3D72E952304D968900733911 /* JellyfinAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3D72E951304D968900733911 /* XCRemoteSwiftPackageReference "jellyfin-sdk-swift" */;
+			productName = JellyfinAPI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 3D72E935304D940200733911 /* Project object */;
 }

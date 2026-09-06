@@ -2,20 +2,24 @@
 //  ContentView.swift
 //  Pelagica
 //
-//  Created by Jan Straßburger on 06.09.26.
-//
 
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var appState = AppState()
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            if appState.isRestoringSession {
+                Color.black.ignoresSafeArea()
+            } else if appState.isLoggedIn {
+                HomeView()
+            } else {
+                AuthFlowView()
+            }
         }
-        .padding()
+        .environmentObject(appState)
+        .task { await appState.restoreSession() }
     }
 }
 
