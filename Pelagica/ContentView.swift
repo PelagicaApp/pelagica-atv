@@ -16,12 +16,13 @@ struct ContentView: View {
                     PelagicaIcon(size: 72)
                 }
             } else if appState.isLoggedIn {
-                HomeView()
+                MainView()
             } else {
                 AuthFlowView()
             }
         }
         .environmentObject(appState)
+        .preferredColorScheme(.dark)
         .task { await appState.restoreSession() }
     }
 }
