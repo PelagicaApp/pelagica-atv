@@ -45,6 +45,9 @@ struct LibraryView: View {
             .navigationDestination(for: BaseItemDto.self) { library in
                 LibraryItemsView(library: library)
             }
+            .navigationDestination(for: ItemDetailRoute.self) { route in
+                ItemDetailView(item: route.item)
+            }
         }
         .task { await loadLibraries() }
     }

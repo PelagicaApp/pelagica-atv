@@ -21,9 +21,7 @@ struct ItemCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 25) {
-            Button {
-                // Item detail isn't implemented yet.
-            } label: {
+            NavigationLink(value: ItemDetailRoute(item: item)) {
                 GeometryReader { proxy in
                     posterBody(size: proxy.size)
                         .onAppear { updateMeasuredWidth(proxy.size.width) }
