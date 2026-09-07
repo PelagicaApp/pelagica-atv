@@ -71,15 +71,14 @@ private struct LibraryCard: View {
                     Color.white.opacity(0.06)
 
                     AsyncImage(url: imageURL) { phase in
-                        switch (phase) {
-                        case .success(let image):
-                            image.resizable().scaledToFill()
-                        case .failure:
-                            fallbackIcon
-                        case .empty:
+                        ZStack {
                             SkeletonView()
-                        @unknown default:
+                                .opacity(phase.image == nil && !isFailure(phase) ? 1 : 0)
                             fallbackIcon
+                                .opacity(isFailure(phase) ? 1 : 0)
+                            if let image = phase.image {
+                                image.resizable().scaledToFill()
+                            }
                         }
                     }
                     .animation(nil, value: imageURL)
@@ -111,6 +110,11 @@ private struct LibraryCard: View {
             parameters: .init(fillWidth: 600, fillHeight: 340, tag: library.imageTags?["Primary"])
         )
         return client.url(with: request, queryAPIKey: true)
+    }
+
+    private func isFailure(_ phase: AsyncImagePhase) -> Bool {
+        if case .failure = phase { return true }
+        return false
     }
 }
 
