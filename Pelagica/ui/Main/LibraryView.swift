@@ -13,7 +13,7 @@ struct LibraryView: View {
     @State private var libraries: [BaseItemDto] = []
     @State private var errorMessage: String?
     
-    private let supportedLibraryTypes: [CollectionType] = [.movies, .tvshows, .boxsets]
+    private let supportedLibraryTypes: [CollectionType] = [.movies, .tvshows]
 
     private let columns = [GridItem(.adaptive(minimum: 380), spacing: 60)]
 
