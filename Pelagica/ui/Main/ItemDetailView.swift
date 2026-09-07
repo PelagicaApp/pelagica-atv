@@ -607,11 +607,6 @@ private struct EpisodeCard: View {
         let watched: Int = episode.userData?.playbackPositionTicks ?? 0
         let runtime: Int = episode.runTimeTicks ?? 0
         let hasPlayed: Bool = episode.userData?.isPlayed ?? false
-        debugPrint(hasPlayed && watched <= 0
-                   ? 100.0
-                   : runtime > 0
-                   ? (Double(watched) / Double(runtime)) * 100.0
-                   : 0.0)
         return hasPlayed && watched <= 0
         ? 100.0
         : runtime > 0
