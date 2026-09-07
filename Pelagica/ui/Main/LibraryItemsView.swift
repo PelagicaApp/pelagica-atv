@@ -16,6 +16,8 @@ struct LibraryItemsView: View {
     @State private var totalCount: Int?
     @State private var isLoadingMore = false
     @State private var errorMessage: String?
+    @State private var sortBy: ItemSortBy = .dateCreated
+    @State private var sortOrder: JellyfinAPI.SortOrder = .descending
 
     /// How many items from the end of the loaded list trigger fetching the next batch.
     private let prefetchThreshold = 8
@@ -33,9 +35,15 @@ struct LibraryItemsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 32) {
-                    Text(library.name ?? "Library")
-                        .font(.system(size: 40, weight: .bold))
-                        .foregroundStyle(.white)
+                    HStack {
+                        Text(library.name ?? "Library")
+                            .font(.system(size: 40, weight: .bold))
+                            .foregroundStyle(.white)
+
+                        Spacer()
+
+                        sortMenu
+                    }
 
                     if let errorMessage {
                         Text(errorMessage)
@@ -62,13 +70,33 @@ struct LibraryItemsView: View {
                 .padding(60)
             }
         }
-        .task {
-            guard items.isEmpty else { return }
+        .task(id: sortKey) {
+            items = []
+            totalCount = nil
             isLoadingMore = true
             await loadMore()
         }
     }
-    
+
+    private var sortMenu: some View {
+        Menu {
+            Picker("Sort By", selection: $sortBy) {
+                Label("Name", systemImage: "textformat").tag(ItemSortBy.name)
+                Label("Random", systemImage: "dice.fill").tag(ItemSortBy.random)
+                Label("Community Rating", systemImage: "star.fill").tag(ItemSortBy.communityRating)
+                Label("Date Added", systemImage: "calendar.badge.plus").tag(ItemSortBy.dateCreated)
+                Label("Release Date", systemImage: "calendar").tag(ItemSortBy.premiereDate)
+            }
+
+            Picker("Order", selection: $sortOrder) {
+                Label("Ascending", systemImage: "arrow.up").tag(JellyfinAPI.SortOrder.ascending)
+                Label("Descending", systemImage: "arrow.down").tag(JellyfinAPI.SortOrder.descending)
+            }
+        } label: {
+            Label("Sort", systemImage: "arrow.up.arrow.down")
+        }
+    }
+
     private var emptyState: some View {
         VStack(spacing: 24) {
             Image(systemName: "film.stack")
@@ -108,6 +136,7 @@ struct LibraryItemsView: View {
     }
 
     private func loadMore() async {
+        let requestedSortKey = sortKey
         defer { isLoadingMore = false }
         guard let client = appState.client, let libraryID = library.id else { return }
         do {
@@ -116,16 +145,20 @@ struct LibraryItemsView: View {
                 startIndex: items.count,
                 limit: batchSize,
                 isRecursive: false,
-                sortOrder: [.descending],
+                sortOrder: [sortOrder],
                 parentID: libraryID,
-                sortBy: [.dateCreated]
+                sortBy: [sortBy]
             ))).value
+            guard requestedSortKey == sortKey else { return }
             items.append(contentsOf: result.items ?? [])
             totalCount = result.totalRecordCount ?? items.count
+        } catch is CancellationError {
         } catch {
             errorMessage = "Couldn't load items."
         }
     }
+
+    private var sortKey: String { "\(sortBy.rawValue)|\(sortOrder.rawValue)" }
 }
 
 #Preview {
