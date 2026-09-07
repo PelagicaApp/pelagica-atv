@@ -6,6 +6,8 @@
 import SwiftUI
 
 struct MainView: View {
+    @State private var query = ""
+
     var body: some View {
         TabView {
             HomeTabView()
@@ -14,7 +16,8 @@ struct MainView: View {
             LibraryView()
                 .tabItem { Label("Library", systemImage: "books.vertical.fill") }
 
-            SearchTabView()
+            SearchTabView(query: query)
+                .searchable(text: $query, prompt: "Search")
                 .tabItem { Label("Search", systemImage: "magnifyingglass") }
 
             SettingsView()
