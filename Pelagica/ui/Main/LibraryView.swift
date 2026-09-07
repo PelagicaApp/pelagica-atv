@@ -12,6 +12,8 @@ struct LibraryView: View {
 
     @State private var libraries: [BaseItemDto] = []
     @State private var errorMessage: String?
+    
+    private let supportedLibraryTypes: [CollectionType] = [.movies, .tvshows, .boxsets]
 
     private let columns = [GridItem(.adaptive(minimum: 380), spacing: 60)]
 
@@ -51,7 +53,13 @@ struct LibraryView: View {
         guard let client = appState.client else { return }
         do {
             let result = try await client.send(Paths.getUserViews()).value
-            libraries = result.items ?? []
+            if (result.items != nil && result.items?.isEmpty == false) {
+                libraries = result.items?.filter {
+                    $0.collectionType != nil && supportedLibraryTypes.contains($0.collectionType!)
+                } ?? []
+            } else {
+                libraries = []
+            }
         } catch {
             errorMessage = "Couldn't load your libraries."
         }
