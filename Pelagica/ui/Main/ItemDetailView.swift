@@ -11,6 +11,12 @@ struct ItemDetailRoute: Hashable {
     let item: BaseItemDto
 }
 
+private struct PlaybackTarget: Identifiable {
+    let id = UUID()
+    let item: BaseItemDto
+    let startTicks: Int
+}
+
 struct ItemDetailView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.openURL) private var openURL
@@ -23,7 +29,9 @@ struct ItemDetailView: View {
     @State private var seasons: [BaseItemDto] = []
     @State private var selectedSeasonID: String?
     @State private var episodes: [BaseItemDto] = []
-    
+
+    @State private var playbackTarget: PlaybackTarget?
+
     @Namespace private var heroNamespace
     @Namespace private var seasonsNamespace
     @Namespace private var episodesNamespace
@@ -58,6 +66,10 @@ struct ItemDetailView: View {
                 await loadNextEpisode()
                 await loadSeasons()
             }
+        }
+        .fullScreenCover(item: $playbackTarget) { target in
+            VideoPlayerView(item: target.item, startTicks: target.startTicks)
+                .ignoresSafeArea()
         }
     }
 
@@ -139,7 +151,8 @@ struct ItemDetailView: View {
                     EpisodeCard(
                         episode: episode,
                         isDefaultFocus: episode.id == episodes.first?.id,
-                        focusNamespace: episodesNamespace
+                        focusNamespace: episodesNamespace,
+                        onPlay: startPlayback
                     )
                 }
             }
@@ -327,7 +340,15 @@ struct ItemDetailView: View {
     }
 
     private func play() {
-        // Playback isn't implemented yet.
+        let target = item.type == .series ? nextEpisode : item
+        guard let target else { return }
+        startPlayback(for: target)
+    }
+
+    private func startPlayback(for target: BaseItemDto) {
+        guard target.id != nil else { return }
+        let startTicks = target.userData?.playbackPositionTicks ?? 0
+        playbackTarget = PlaybackTarget(item: target, startTicks: startTicks)
     }
 
     private func toggleWatchlist() {
@@ -517,6 +538,7 @@ private struct EpisodeCard: View {
     let episode: BaseItemDto
     var isDefaultFocus = false
     var focusNamespace: Namespace.ID
+    var onPlay: (BaseItemDto) -> Void
 
     private let cardWidth: CGFloat = 420
     private let cornerRadius: CGFloat = 12
@@ -524,7 +546,7 @@ private struct EpisodeCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Button {
-                // Playback isn't implemented yet.
+                onPlay(episode)
             } label: {
                 thumbnail
             }
