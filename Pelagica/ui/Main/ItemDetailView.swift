@@ -31,6 +31,7 @@ struct ItemDetailView: View {
     @State private var episodes: [BaseItemDto] = []
 
     @State private var playbackTarget: PlaybackTarget?
+    @State private var localTrailer: BaseItemDto?
 
     @Namespace private var heroNamespace
     @Namespace private var seasonsNamespace
@@ -62,6 +63,7 @@ struct ItemDetailView: View {
         .background(Color.black.ignoresSafeArea())
         .task {
             await loadFullItem()
+            await loadLocalTrailer()
             if item.type == .series {
                 await loadNextEpisode()
                 await loadSeasons()
@@ -327,9 +329,13 @@ struct ItemDetailView: View {
             .prefersDefaultFocus(true, in: heroNamespace)
             .focused($isPlayButtonFocused)
 
-            if let trailerURL {
+            if localTrailer != nil || trailerURL != nil {
                 Button {
-                    openURL(trailerURL)
+                    if let localTrailer {
+                        startPlayback(for: localTrailer)
+                    } else if let trailerURL {
+                        openURL(trailerURL)
+                    }
                 } label: {
                     Label("Trailer", systemImage: "film")
                 }
@@ -398,6 +404,16 @@ struct ItemDetailView: View {
             isWatchlist = full.userData?.isLikes ?? false
         } catch {
             // The stub data passed in from the grid is enough to render the page.
+        }
+    }
+
+    private func loadLocalTrailer() async {
+        guard let client = appState.client, let id = item.id, (item.localTrailerCount ?? 0) > 0 else { return }
+        do {
+            let trailers = try await client.send(Paths.getLocalTrailers(itemID: id, userID: appState.currentUser?.id)).value
+            localTrailer = trailers.first
+        } catch {
+            localTrailer = nil
         }
     }
 
