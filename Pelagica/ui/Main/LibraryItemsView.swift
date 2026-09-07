@@ -44,6 +44,7 @@ struct LibraryItemsView: View {
 
                         sortMenu
                     }
+                    .focusSection()
 
                     if let errorMessage {
                         Text(errorMessage)
@@ -65,6 +66,7 @@ struct LibraryItemsView: View {
                                 }
                             }
                         }
+                        .focusSection()
                     }
                 }
                 .padding(60)
