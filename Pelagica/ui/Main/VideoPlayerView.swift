@@ -23,6 +23,7 @@ struct VideoPlayerView: View {
     @State private var audioStreams: [MediaStream] = []
     @State private var selectedAudioStreamIndex: Int?
     @State private var currentMediaSourceID: String?
+    @State private var currentPlaySessionID: String?
     @State private var didFailToResolve = false
 
     var body: some View {
@@ -39,7 +40,9 @@ struct VideoPlayerView: View {
                     audioStreams: audioStreams,
                     selectedAudioStreamIndex: selectedAudioStreamIndex,
                     isTranscoded: isTranscoded,
-                    onAudioTrackSelected: switchAudioTrack
+                    onAudioTrackSelected: switchAudioTrack,
+                    onProgress: reportProgress,
+                    onStopped: reportStopped
                 )
                 // An audio-track switch on transcoded content resolves a new stream URL; forcing
                 // view identity on it makes SwiftUI tear down and recreate the player instead of
@@ -150,8 +153,7 @@ struct VideoPlayerView: View {
                 transcoded = false
             } else if let transcodingPath = mediaSource.transcodingURL {
                 url = resolvedTranscodingURL(path: transcodingPath, client: client)
-                // The transcode already starts at the requested ticks server-side.
-                startTimeSeconds = 0
+                startTimeSeconds = Double(ticks) / 10_000_000
                 transcoded = true
             } else {
                 url = nil
@@ -178,8 +180,10 @@ struct VideoPlayerView: View {
             audioStreams = streams
             selectedAudioStreamIndex = audioStreamIndex ?? mediaSource.defaultAudioStreamIndex ?? streams.first?.index
             currentMediaSourceID = mediaSourceID
+            currentPlaySessionID = info.playSessionID
             isTranscoded = transcoded
             streamURL = url
+            reportPlaybackStarted(positionTicks: ticks)
         } catch {
             print("Pelagica playback: PlaybackInfo request failed for item \(itemID): \(error)")
             didFailToResolve = true
@@ -194,6 +198,54 @@ struct VideoPlayerView: View {
         }
         return components.url(relativeTo: client.configuration.url)?.absoluteURL
     }
+
+    // MARK: - Playback reporting
+
+    private func reportPlaybackStarted(positionTicks: Int) {
+        guard let client = appState.client, let itemID = item.id, let mediaSourceID = currentMediaSourceID else { return }
+        Task {
+            _ = try? await client.send(Paths.reportPlaybackStart(PlaybackStateInfo(
+                audioStreamIndex: selectedAudioStreamIndex,
+                canSeek: true,
+                isPaused: false,
+                itemID: itemID,
+                mediaSourceID: mediaSourceID,
+                playMethod: isTranscoded ? .transcode : .directPlay,
+                playSessionID: currentPlaySessionID,
+                positionTicks: positionTicks
+            )))
+        }
+    }
+
+    private func reportProgress(seconds: TimeInterval, isPaused: Bool) {
+        guard let client = appState.client, let itemID = item.id, let mediaSourceID = currentMediaSourceID else { return }
+        let positionTicks = Int(seconds * 10_000_000)
+        Task {
+            _ = try? await client.send(Paths.reportPlaybackProgress(PlaybackStateInfo(
+                audioStreamIndex: selectedAudioStreamIndex,
+                canSeek: true,
+                isPaused: isPaused,
+                itemID: itemID,
+                mediaSourceID: mediaSourceID,
+                playMethod: isTranscoded ? .transcode : .directPlay,
+                playSessionID: currentPlaySessionID,
+                positionTicks: positionTicks
+            )))
+        }
+    }
+
+    private func reportStopped(seconds: TimeInterval) {
+        guard let client = appState.client, let itemID = item.id, let mediaSourceID = currentMediaSourceID else { return }
+        let positionTicks = Int(seconds * 10_000_000)
+        Task {
+            _ = try? await client.send(Paths.reportPlaybackStopped(PlaybackStopInfo(
+                itemID: itemID,
+                mediaSourceID: mediaSourceID,
+                playSessionID: currentPlaySessionID,
+                positionTicks: positionTicks
+            )))
+        }
+    }
 }
 
 private struct AVPlayerControllerView: UIViewControllerRepresentable {
@@ -206,6 +258,8 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
     let selectedAudioStreamIndex: Int?
     let isTranscoded: Bool
     let onAudioTrackSelected: (Int, TimeInterval) -> Void
+    let onProgress: (TimeInterval, Bool) -> Void
+    let onStopped: (TimeInterval) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -218,6 +272,7 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
         if startTimeSeconds > 0 {
             player.seek(to: CMTime(seconds: startTimeSeconds, preferredTimescale: 1))
         }
+        context.coordinator.configureReporting(onProgress: onProgress, onStopped: onStopped, player: player)
 
         let controller = AVPlayerViewController()
         controller.player = player
@@ -243,6 +298,7 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
     }
 
     static func dismantleUIViewController(_ uiViewController: AVPlayerViewController, coordinator: Coordinator) {
+        coordinator.reportStopped()
         uiViewController.player?.pause()
         uiViewController.player = nil
     }
@@ -276,6 +332,10 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
         private var statusObservation: NSKeyValueObservation?
         private var errorLogObserver: NSObjectProtocol?
 
+        private weak var reportedPlayer: AVPlayer?
+        private var progressObserverToken: Any?
+        private var onStopped: ((TimeInterval) -> Void)?
+
         func observe(_ item: AVPlayerItem) {
             statusObservation = item.observe(\.status, options: [.new]) { item, _ in
                 guard item.status == .failed else { return }
@@ -297,6 +357,29 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
                 uri: \(entry.uri ?? "nil")
                 """)
             }
+        }
+
+        // MARK: Playback reporting
+
+        func configureReporting(onProgress: @escaping (TimeInterval, Bool) -> Void, onStopped: @escaping (TimeInterval) -> Void, player: AVPlayer) {
+            self.onStopped = onStopped
+            reportedPlayer = player
+            guard progressObserverToken == nil else { return }
+            let interval = CMTime(seconds: 10, preferredTimescale: 1)
+            progressObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak player] time in
+                guard let player else { return }
+                onProgress(time.seconds, player.rate == 0)
+            }
+        }
+
+        func reportStopped() {
+            if let seconds = reportedPlayer?.currentTime().seconds, seconds.isFinite {
+                onStopped?(seconds)
+            }
+            if let progressObserverToken, let reportedPlayer {
+                reportedPlayer.removeTimeObserver(progressObserverToken)
+            }
+            progressObserverToken = nil
         }
 
         // MARK: Audio track menu

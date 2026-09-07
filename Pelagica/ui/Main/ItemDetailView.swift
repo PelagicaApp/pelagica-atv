@@ -71,6 +71,18 @@ struct ItemDetailView: View {
             VideoPlayerView(item: target.item, startTicks: target.startTicks)
                 .ignoresSafeArea()
         }
+        .onChange(of: playbackTarget == nil) { wasNilBefore, isNilNow in
+            guard isNilNow, !wasNilBefore else { return }
+            Task {
+                await loadFullItem()
+                if item.type == .series {
+                    await loadNextEpisode()
+                    if let selectedSeasonID {
+                        await loadEpisodes(seasonID: selectedSeasonID)
+                    }
+                }
+            }
+        }
     }
 
     private var hero: some View {
@@ -333,10 +345,15 @@ struct ItemDetailView: View {
     }
 
     private var playLabel: String {
-        guard item.type == .series, let nextEpisode else { return "Play" }
-        let season = nextEpisode.parentIndexNumber ?? 1
-        let episode = nextEpisode.indexNumber ?? 1
-        return "Play S\(season) E\(episode)"
+        if item.type == .series {
+            guard let nextEpisode else { return "Play" }
+            let season = nextEpisode.parentIndexNumber ?? 1
+            let episode = nextEpisode.indexNumber ?? 1
+            return "Play S\(season) E\(episode)"
+        }
+
+        let hasProgress = (item.userData?.playbackPositionTicks ?? 0) > 0 && item.userData?.isPlayed != true
+        return hasProgress ? "Resume" : "Play"
     }
 
     private func play() {
