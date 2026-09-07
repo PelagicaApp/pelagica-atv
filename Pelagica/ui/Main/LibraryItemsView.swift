@@ -20,7 +20,7 @@ struct LibraryItemsView: View {
     /// How many items from the end of the loaded list trigger fetching the next batch.
     private let prefetchThreshold = 8
     private let batchSize = 48
-    private let columns = [GridItem(.adaptive(minimum: 220), spacing: 40)]
+    private let columns = [GridItem(.adaptive(minimum: 280), spacing: 40)]
 
     private var hasMore: Bool {
         guard let totalCount else { return true }
