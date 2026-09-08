@@ -24,8 +24,6 @@ struct SectionItemsConfig: Decodable {
     }
 }
 
-/// Mirrors the web client's `DETAIL_FIELDS`, shown as small text chips under
-/// items in a generic `items` section.
 enum DetailField: String, Decodable {
     case releaseYear = "ReleaseYear"
     case releaseYearAndMonth = "ReleaseYearAndMonth"
@@ -93,12 +91,20 @@ struct NextUpSection: Decodable {
     var limit: Int?
 }
 
+struct ResumeSection: Decodable {
+    var title: String?
+    var titleLine: ContinueWatchingTitleLine?
+    var detailLine: [ContinueWatchingDetailLine]?
+    var limit: Int?
+}
+
 enum HomeScreenSection: Decodable {
     case mediaBar(MediaBarSection)
     case recentlyAdded(RecentlyAddedSection)
     case items(ItemsSection)
     case continueWatching(ContinueWatchingSection)
     case nextUp(NextUpSection)
+    case resume(ResumeSection)
     case unsupported
 
     private enum CodingKeys: String, CodingKey {
@@ -119,6 +125,7 @@ enum HomeScreenSection: Decodable {
         case "items": self = .items(try ItemsSection(from: decoder))
         case "continueWatching": self = .continueWatching(try ContinueWatchingSection(from: decoder))
         case "nextUp": self = .nextUp(try NextUpSection(from: decoder))
+        case "resume": self = .resume(try ResumeSection(from: decoder))
         default: self = .unsupported
         }
     }

@@ -196,6 +196,14 @@ struct HomeTabView: View {
                 items: items,
                 kind: .continueStyle(titleLine: section.titleLine, detailLines: section.detailLine)
             )]
+            
+        case .resume(let section):
+            let items = await fetchResume(client: client, limit: section.limit ?? 20)
+            return [HomeRow(
+                title: section.title ?? "Resume",
+                items: items,
+                kind: .continueStyle(titleLine: section.titleLine, detailLines: section.detailLine)
+            )]
 
         case .recentlyAdded(let section):
             return await fetchRecentlyAddedRows(section: section, client: client)
@@ -296,6 +304,25 @@ struct HomeTabView: View {
             return []
         }
     }
+    
+    private func fetchResume(client: JellyfinClient, limit: Int) async -> [BaseItemDto] {
+        guard let userID = appState.currentUser?.id else { return [] }
+        return await fetchResumeItems(client: client, userID: userID, limit: limit)
+    }
+    
+    private func fetchResumeItems(client: JellyfinClient, userID: String, limit: Int) async -> [BaseItemDto] {
+        do {
+            let result = try await client.send(Paths.getResumeItems(parameters: .init(
+                userID: userID,
+                limit: limit,
+                fields: [.overview],
+                enableUserData: true,
+            ))).value
+            return result.items ?? []
+        } catch {
+            return []
+        }
+    }
 
     private func fetchRecentlyAddedRows(section: RecentlyAddedSection, client: JellyfinClient) async -> [HomeRow] {
         guard let userID = appState.currentUser?.id else { return [] }
@@ -360,7 +387,7 @@ struct HomeTabView: View {
 
     nonisolated private static func skeletonKind(for section: HomeScreenSection) -> HomeSlot.SkeletonKind {
         switch section {
-        case .continueWatching, .nextUp:
+        case .continueWatching, .nextUp, .resume:
             return .landscape
         case .items, .recentlyAdded, .mediaBar, .unsupported:
             return .poster
@@ -373,6 +400,8 @@ struct HomeTabView: View {
             return section.title ?? "Continue Watching"
         case .nextUp(let section):
             return section.title ?? "Next Up"
+        case .resume(let section):
+            return section.title ?? "Resume"
         case .items(let section):
             return section.title ?? ""
         case .recentlyAdded, .mediaBar, .unsupported:
