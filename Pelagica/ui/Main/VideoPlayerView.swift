@@ -17,16 +17,24 @@ struct VideoPlayerView: View {
     let item: BaseItemDto
     var startTicks: Int = 0
 
+    @State private var currentItem: BaseItemDto
     @State private var streamURL: URL?
     @State private var startTimeSeconds: Double = 0
     @State private var isTranscoded = false
     @State private var audioStreams: [MediaStream] = []
     @State private var selectedAudioStreamIndex: Int?
+    @State private var activeItemID: String?
     @State private var currentMediaSourceID: String?
     @State private var currentPlaySessionID: String?
     @State private var didFailToResolve = false
     @State private var introRange: ClosedRange<TimeInterval>?
     @State private var outroRange: ClosedRange<TimeInterval>?
+
+    init(item: BaseItemDto, startTicks: Int = 0) {
+        self.item = item
+        self.startTicks = startTicks
+        _currentItem = State(initialValue: item)
+    }
 
     var body: some View {
         ZStack {
@@ -38,7 +46,7 @@ struct VideoPlayerView: View {
                     startTimeSeconds: startTimeSeconds,
                     title: playerTitle,
                     subtitle: playerSubtitle,
-                    overview: item.overview,
+                    overview: currentItem.overview,
                     audioStreams: audioStreams,
                     selectedAudioStreamIndex: selectedAudioStreamIndex,
                     isTranscoded: isTranscoded,
@@ -46,7 +54,8 @@ struct VideoPlayerView: View {
                     outroRange: outroRange,
                     onAudioTrackSelected: switchAudioTrack,
                     onProgress: reportProgress,
-                    onStopped: reportStopped
+                    onStopped: reportStopped,
+                    onPlaybackEnded: handlePlaybackEnded
                 )
                 // An audio-track switch on transcoded content resolves a new stream URL; forcing
                 // view identity on it makes SwiftUI tear down and recreate the player instead of
@@ -65,25 +74,65 @@ struct VideoPlayerView: View {
                     .tint(.white)
             }
         }
-        .task {
-            async let playback: Void = resolvePlayback(atTicks: startTicks)
+        .task(id: currentItem.id) {
+            streamURL = nil
+            didFailToResolve = false
+            introRange = nil
+            outroRange = nil
+            let ticks = currentItem.id == item.id ? startTicks : 0
+            async let playback: Void = resolvePlayback(atTicks: ticks)
             async let intro: Void = fetchSkippableSegments()
             _ = await (playback, intro)
         }
     }
 
     private var playerTitle: String {
-        if item.type == .episode, let seriesName = item.seriesName {
+        if currentItem.type == .episode, let seriesName = currentItem.seriesName {
             return seriesName
         }
-        return item.name ?? ""
+        return currentItem.name ?? ""
     }
 
     private var playerSubtitle: String? {
-        guard item.type == .episode else { return nil }
-        let season = item.parentIndexNumber ?? 1
-        let episode = item.indexNumber ?? 1
-        return "S\(season):E\(episode) \(item.name ?? "")"
+        guard currentItem.type == .episode else { return nil }
+        let season = currentItem.parentIndexNumber ?? 1
+        let episode = currentItem.indexNumber ?? 1
+        return "S\(season):E\(episode) \(currentItem.name ?? "")"
+    }
+
+    private func handlePlaybackEnded() {
+        Task {
+            if let next = await fetchNextEpisode() {
+                currentItem = next
+            } else {
+                dismiss()
+            }
+        }
+    }
+
+    private func fetchNextEpisode() async -> BaseItemDto? {
+        guard
+            currentItem.type == .episode,
+            let client = appState.client,
+            let seriesID = currentItem.seriesID,
+            let episodeID = currentItem.id
+        else { return nil }
+
+        do {
+            let result = try await client.send(Paths.getEpisodes(
+                seriesID: seriesID,
+                parameters: .init(userID: appState.currentUser?.id, adjacentTo: episodeID, enableUserData: true)
+            )).value
+            guard
+                let items = result.items,
+                let currentIndex = items.firstIndex(where: { $0.id == episodeID })
+            else { return nil }
+            let nextIndex = items.index(after: currentIndex)
+            guard nextIndex < items.endIndex else { return nil }
+            return items[nextIndex]
+        } catch {
+            return nil
+        }
     }
 
     private func switchAudioTrack(to streamIndex: Int, atSeconds seconds: TimeInterval) {
@@ -117,7 +166,7 @@ struct VideoPlayerView: View {
     )
 
     private func resolvePlayback(atTicks ticks: Int, audioStreamIndex: Int? = nil, mediaSourceID: String? = nil) async {
-        guard let client = appState.client, let itemID = item.id else {
+        guard let client = appState.client, let itemID = currentItem.id else {
             didFailToResolve = true
             return
         }
@@ -185,6 +234,7 @@ struct VideoPlayerView: View {
             """)
             audioStreams = streams
             selectedAudioStreamIndex = audioStreamIndex ?? mediaSource.defaultAudioStreamIndex ?? streams.first?.index
+            activeItemID = itemID
             currentMediaSourceID = mediaSourceID
             currentPlaySessionID = info.playSessionID
             isTranscoded = transcoded
@@ -197,7 +247,7 @@ struct VideoPlayerView: View {
     }
 
     private func fetchSkippableSegments() async {
-        guard let client = appState.client, let itemID = item.id else { return }
+        guard let client = appState.client, let itemID = currentItem.id else { return }
         do {
             let result = try await client.send(Paths.getItemSegments(itemID: itemID, includeSegmentTypes: [.intro, .outro])).value
             for segment in result.items ?? [] {
@@ -229,7 +279,7 @@ struct VideoPlayerView: View {
     // MARK: - Playback reporting
 
     private func reportPlaybackStarted(positionTicks: Int) {
-        guard let client = appState.client, let itemID = item.id, let mediaSourceID = currentMediaSourceID else { return }
+        guard let client = appState.client, let itemID = activeItemID, let mediaSourceID = currentMediaSourceID else { return }
         Task {
             _ = try? await client.send(Paths.reportPlaybackStart(PlaybackStateInfo(
                 audioStreamIndex: selectedAudioStreamIndex,
@@ -245,7 +295,7 @@ struct VideoPlayerView: View {
     }
 
     private func reportProgress(seconds: TimeInterval, isPaused: Bool) {
-        guard let client = appState.client, let itemID = item.id, let mediaSourceID = currentMediaSourceID else { return }
+        guard let client = appState.client, let itemID = activeItemID, let mediaSourceID = currentMediaSourceID else { return }
         let positionTicks = Int(seconds * 10_000_000)
         Task {
             _ = try? await client.send(Paths.reportPlaybackProgress(PlaybackStateInfo(
@@ -262,7 +312,7 @@ struct VideoPlayerView: View {
     }
 
     private func reportStopped(seconds: TimeInterval) {
-        guard let client = appState.client, let itemID = item.id, let mediaSourceID = currentMediaSourceID else { return }
+        guard let client = appState.client, let itemID = activeItemID, let mediaSourceID = currentMediaSourceID else { return }
         let positionTicks = Int(seconds * 10_000_000)
         Task {
             _ = try? await client.send(Paths.reportPlaybackStopped(PlaybackStopInfo(
@@ -289,13 +339,14 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
     let onAudioTrackSelected: (Int, TimeInterval) -> Void
     let onProgress: (TimeInterval, Bool) -> Void
     let onStopped: (TimeInterval) -> Void
+    let onPlaybackEnded: () -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let item = AVPlayerItem(url: url)
         item.externalMetadata = metadataItems()
-        context.coordinator.observe(item)
+        context.coordinator.observe(item, onPlaybackEnded: onPlaybackEnded)
 
         let player = AVPlayer(playerItem: item)
         if startTimeSeconds > 0 {
@@ -362,6 +413,7 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
 
         private var statusObservation: NSKeyValueObservation?
         private var errorLogObserver: NSObjectProtocol?
+        private var didPlayToEndObserver: NSObjectProtocol?
 
         private weak var reportedPlayer: AVPlayer?
         private var progressObserverToken: Any?
@@ -385,7 +437,7 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
         private var introTimeObserverToken: Any?
         private var visibleSkipSegment: SkipSegmentKind?
 
-        func observe(_ item: AVPlayerItem) {
+        func observe(_ item: AVPlayerItem, onPlaybackEnded: @escaping () -> Void) {
             statusObservation = item.observe(\.status, options: [.new]) { item, _ in
                 guard item.status == .failed else { return }
                 print("Pelagica playback: AVPlayerItem failed: \(item.error?.localizedDescription ?? "unknown") \(String(describing: item.error))")
@@ -405,6 +457,14 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
                 domain: \(entry.errorDomain), comment: \(entry.errorComment ?? "nil"), \
                 uri: \(entry.uri ?? "nil")
                 """)
+            }
+
+            didPlayToEndObserver = NotificationCenter.default.addObserver(
+                forName: AVPlayerItem.didPlayToEndTimeNotification,
+                object: item,
+                queue: .main
+            ) { _ in
+                onPlaybackEnded()
             }
         }
 
