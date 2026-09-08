@@ -43,7 +43,7 @@ struct HomeMediaBar: View {
                 .ignoresSafeArea(edges: [.top, .horizontal])
 
             VStack(alignment: .leading, spacing: 24) {
-                titleText
+                titleBlock
                 metadataRow
                 genresText
                 overviewText
@@ -98,6 +98,22 @@ struct HomeMediaBar: View {
             .lineLimit(2)
             .multilineTextAlignment(.leading)
             .frame(height: 140, alignment: .bottomLeading)
+    }
+    
+    @ViewBuilder
+    private var titleBlock: some View {
+        if let logoURL {
+            AsyncImage(url: logoURL) { phase in
+                if let image = phase.image {
+                    image.resizable().scaledToFit()
+                } else {
+                    titleText
+                }
+            }
+            .frame(maxWidth: 560, maxHeight: 150, alignment: .leading)
+        } else {
+            titleText
+        }
     }
 
     private var metadataRow: some View {
@@ -287,6 +303,16 @@ struct HomeMediaBar: View {
             itemID: id,
             imageType: ImageType.backdrop.rawValue,
             parameters: .init(fillWidth: 1920, fillHeight: 1080, tag: tag)
+        )
+        return client.url(with: request, queryAPIKey: true)
+    }
+    
+    private var logoURL: URL? {
+        guard let currentItem, let id = currentItem.id, let client = appState.client, let tag = currentItem.imageTags?["Logo"] else { return nil }
+        let request = Paths.getItemImage(
+            itemID: id,
+            imageType: ImageType.logo.rawValue,
+            parameters: .init(fillWidth: 800, tag: tag)
         )
         return client.url(with: request, queryAPIKey: true)
     }
