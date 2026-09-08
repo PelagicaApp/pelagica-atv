@@ -55,6 +55,13 @@ enum ContinueWatchingDetailLine: String, Decodable {
     case none = "None"
 }
 
+struct MediaBarSection: Decodable {
+    var title: String?
+    var items: SectionItemsConfig?
+    var showFavoriteButton: Bool?
+    var showWatchlistButton: Bool?
+}
+
 struct RecentlyAddedSection: Decodable {
     var title: String?
     var limit: Int?
@@ -87,6 +94,7 @@ struct NextUpSection: Decodable {
 }
 
 enum HomeScreenSection: Decodable {
+    case mediaBar(MediaBarSection)
     case recentlyAdded(RecentlyAddedSection)
     case items(ItemsSection)
     case continueWatching(ContinueWatchingSection)
@@ -106,6 +114,7 @@ enum HomeScreenSection: Decodable {
         }
 
         switch try container.decode(String.self, forKey: .type) {
+        case "mediaBar": self = .mediaBar(try MediaBarSection(from: decoder))
         case "recentlyAdded": self = .recentlyAdded(try RecentlyAddedSection(from: decoder))
         case "items": self = .items(try ItemsSection(from: decoder))
         case "continueWatching": self = .continueWatching(try ContinueWatchingSection(from: decoder))
@@ -121,6 +130,11 @@ struct HomeScreenConfig: Decodable {
 
 extension HomeScreenConfig {
     static let fallback = HomeScreenConfig(homeScreenSections: [
+        .mediaBar(MediaBarSection(
+            items: SectionItemsConfig(sortBy: [.random], types: [.movie, .series]),
+            showFavoriteButton: true,
+            showWatchlistButton: true
+        )),
         .continueWatching(ContinueWatchingSection(
             title: "Continue Watching",
             titleLine: .itemTitleWithEpisodeInfo,

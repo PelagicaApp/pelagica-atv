@@ -258,7 +258,7 @@ struct ItemDetailView: View {
     private var metadataRow: some View {
         HStack(spacing: 20) {
             if let year = item.productionYear {
-                Text("\(year)")
+                Text(year, format: .number.grouping(.never))
             }
 
             if let rating = item.communityRating {
@@ -509,7 +509,7 @@ struct ItemDetailView: View {
     }
 }
 
-private struct DetailActionButtonStyle: ButtonStyle {
+struct DetailActionButtonStyle: ButtonStyle {
     var emphasis: PelagicaButtonEmphasis
 
     func makeBody(configuration: Configuration) -> some View {

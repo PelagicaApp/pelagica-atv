@@ -13,36 +13,70 @@ struct HomeTabView: View {
     @State private var slots: [HomeSlot] = []
     @State private var isLoadingConfig = true
     @State private var path = NavigationPath()
+    @State private var mediaBarItems: [BaseItemDto] = []
+    @State private var mediaBarShowFavoriteButton = false
+    @State private var mediaBarShowWatchlistButton = false
+    @State private var hasMediaBarSection = false
 
     var body: some View {
         NavigationStack(path: $path) {
-            ZStack {
-                Color.black.ignoresSafeArea()
+            GeometryReader { proxy in
+                ZStack {
+                    Color.black.ignoresSafeArea()
 
-                if isLoadingConfig {
-                    ProgressView()
-                        .tint(.white)
-                } else {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 30) {
-                            ForEach(slots) { slot in
-                                if slot.isLoading {
-                                    loadingRow(kind: slot.skeletonKind, title: slot.title)
+                    if isLoadingConfig {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        ScrollViewReader { scrollProxy in
+                            ScrollView {
+                                LazyVStack(alignment: .leading, spacing: 30) {
+                                    if hasMediaBarSection {
+                                        Group {
+                                            if mediaBarItems.isEmpty {
+                                                SkeletonView()
+                                            } else {
+                                                HomeMediaBar(
+                                                    items: mediaBarItems,
+                                                    showFavoriteButton: mediaBarShowFavoriteButton,
+                                                    showWatchlistButton: mediaBarShowWatchlistButton,
+                                                    onButtonFocused: {
+                                                        withAnimation {
+                                                            scrollProxy.scrollTo(Self.topScrollAnchor, anchor: .top)
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        }
+                                        .frame(height: proxy.size.height * 0.82)
                                         .focusSection()
-                                } else {
-                                    ForEach(slot.rows) { row in
-                                        if !row.items.isEmpty {
-                                            rowView(for: row)
+                                        .id(Self.topScrollAnchor)
+
+                                        Color.clear.frame(height: 40)
+                                    }
+
+                                    ForEach(slots) { slot in
+                                        if slot.isLoading {
+                                            loadingRow(kind: slot.skeletonKind, title: slot.title)
                                                 .focusSection()
+                                        } else {
+                                            ForEach(slot.rows) { row in
+                                                if !row.items.isEmpty {
+                                                    rowView(for: row)
+                                                        .focusSection()
+                                                }
+                                            }
                                         }
                                     }
                                 }
+                                .padding(.top, hasMediaBarSection ? 0 : 60)
+                                .padding(.bottom, 60)
                             }
                         }
-                        .padding(.vertical, 60)
                     }
                 }
             }
+            .ignoresSafeArea(edges: hasMediaBarSection ? [.top, .horizontal] : [])
             .navigationDestination(for: ItemDetailRoute.self) { route in
                 ItemDetailView(item: route.item)
             }
@@ -50,6 +84,8 @@ struct HomeTabView: View {
         .onDisappear { path = NavigationPath() }
         .task { await loadHome() }
     }
+
+    private static let topScrollAnchor = "homeTop"
 
     private func loadingRow(kind: HomeSlot.SkeletonKind, title: String?) -> some View {
         HomeSectionRow(title: title ?? "", isLoadingTitle: title == nil) {
@@ -105,10 +141,28 @@ struct HomeTabView: View {
         }
 
         let config = await PelagicaPluginAPI.fetchHomeScreenConfig(serverURL: client.configuration.url)
-        let sections = config.homeScreenSections ?? []
+        let allSections = config.homeScreenSections ?? []
+
+        let mediaBarSection = allSections.compactMap { section -> MediaBarSection? in
+            guard case .mediaBar(let mediaBar) = section else { return nil }
+            return mediaBar
+        }.first
+        hasMediaBarSection = mediaBarSection != nil
+        mediaBarShowFavoriteButton = mediaBarSection?.showFavoriteButton ?? false
+        mediaBarShowWatchlistButton = mediaBarSection?.showWatchlistButton ?? false
+
+        let sections = allSections.filter { section in
+            if case .mediaBar = section { return false }
+            return true
+        }
 
         slots = sections.map { HomeSlot(skeletonKind: Self.skeletonKind(for: $0), title: Self.placeholderTitle(for: $0)) }
         isLoadingConfig = false
+
+        async let mediaBarFetch: [BaseItemDto] = {
+            guard let mediaBarSection else { return [] }
+            return await self.fetchItems(config: mediaBarSection.items, client: client, fallbackLimit: 10)
+        }()
 
         await withTaskGroup(of: (Int, [HomeRow]).self) { group in
             for (index, section) in sections.enumerated() {
@@ -121,6 +175,8 @@ struct HomeTabView: View {
                 slots[index] = HomeSlot(rows: rows, isLoading: false)
             }
         }
+
+        mediaBarItems = await mediaBarFetch
     }
 
     private func fetchRows(for section: HomeScreenSection, client: JellyfinClient) async -> [HomeRow] {
@@ -153,7 +209,7 @@ struct HomeTabView: View {
                 kind: .poster(detailText: { Self.detailFieldsText(for: $0, fields: fields) })
             )]
 
-        case .unsupported:
+        case .mediaBar, .unsupported:
             return []
         }
     }
@@ -175,7 +231,7 @@ struct HomeTabView: View {
                 isRecursive: true,
                 sortOrder: [config?.sortOrder ?? .descending],
                 parentID: config?.libraryID,
-                fields: [.overview],
+                fields: [.overview, .genres],
                 includeItemTypes: (config?.types?.isEmpty == false) ? config?.types : [.movie, .series],
                 filters: filters,
                 isFavorite: config?.isFavorite,
@@ -306,7 +362,7 @@ struct HomeTabView: View {
         switch section {
         case .continueWatching, .nextUp:
             return .landscape
-        case .items, .recentlyAdded, .unsupported:
+        case .items, .recentlyAdded, .mediaBar, .unsupported:
             return .poster
         }
     }
@@ -319,7 +375,7 @@ struct HomeTabView: View {
             return section.title ?? "Next Up"
         case .items(let section):
             return section.title ?? ""
-        case .recentlyAdded, .unsupported:
+        case .recentlyAdded, .mediaBar, .unsupported:
             return nil
         }
     }
