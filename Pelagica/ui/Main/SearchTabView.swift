@@ -16,58 +16,55 @@ struct SearchTabView: View {
     @State private var results: [BaseItemDto] = []
     @State private var errorMessage: String?
     @State private var isLoading = false
-    
-    let resultsCount = 25
+    @State private var path = NavigationPath()
+    @State private var query = ""
 
-    private let searchKeyboardReservedHeight: CGFloat = 0
+    let resultsCount = 25
 
     private let columns = [GridItem(.adaptive(minimum: 280), spacing: 40)]
 
-    var query = ""
-
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ZStack {
                 Color.black.ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    Color.clear
-                        .frame(height: searchKeyboardReservedHeight)
-
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 32) {
-                            if let errorMessage {
-                                Text(errorMessage)
-                                    .foregroundStyle(.secondary)
-                            } else if isLoading && results.isEmpty {
-                                LazyVGrid(columns: columns, spacing: 60) {
-                                    ForEach(0..<10, id: \.self) { _ in
-                                        SkeletonView()
-                                            .aspectRatio(2.0 / 3.0, contentMode: .fit)
-                                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                                    }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 32) {
+                        if let errorMessage {
+                            Text(errorMessage)
+                                .foregroundStyle(.secondary)
+                        } else if isLoading && results.isEmpty {
+                            LazyVGrid(columns: columns, spacing: 60) {
+                                ForEach(0..<10, id: \.self) { _ in
+                                    SkeletonView()
+                                        .aspectRatio(2.0 / 3.0, contentMode: .fit)
+                                        .clipShape(RoundedRectangle(cornerRadius: 16))
                                 }
-                                .focusSection()
-                            } else if results.isEmpty {
-                                emptyState
-                                    .focusSection()
-                            } else {
-                                LazyVGrid(columns: columns, spacing: 60) {
-                                    ForEach(results.indices, id: \.self) { index in
-                                        ItemCard(item: results[index])
-                                            .prefersDefaultFocus(index == 0, in: namespace)
-                                    }
-                                }
-                                .focusScope(namespace)
-                                .focusSection()
                             }
+                            .focusSection()
+                        } else if results.isEmpty {
+                            emptyState
+                                .focusSection()
+                        } else {
+                            LazyVGrid(columns: columns, spacing: 60) {
+                                ForEach(results.indices, id: \.self) { index in
+                                    ItemCard(item: results[index])
+                                        .prefersDefaultFocus(index == 0, in: namespace)
+                                }
+                            }
+                            .focusScope(namespace)
+                            .focusSection()
                         }
-                        .padding(60)
                     }
-                    .clipped()
+                    .padding(60)
                 }
             }
+            .navigationDestination(for: ItemDetailRoute.self) { route in
+                ItemDetailView(item: route.item)
+            }
+            .searchable(text: $query, prompt: "Search")
         }
+        .onDisappear { path = NavigationPath() }
         .task(id: query) {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
