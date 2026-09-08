@@ -17,10 +17,11 @@ struct ContinueWatchingCard: View {
     private let aspectRatio: CGFloat = 16.0 / 9.0
 
     @State private var measuredWidth: CGFloat?
+    @State private var playbackTarget: PlaybackTarget?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            NavigationLink(value: ItemDetailRoute(item: item)) {
+            Button(action: startPlayback) {
                 GeometryReader { proxy in
                     thumbBody(size: proxy.size)
                         .onAppear { updateMeasuredWidth(proxy.size.width) }
@@ -48,6 +49,16 @@ struct ContinueWatchingCard: View {
                 }
             }
         }
+        .fullScreenCover(item: $playbackTarget) { target in
+            VideoPlayerView(item: target.item, startTicks: target.startTicks)
+                .ignoresSafeArea()
+        }
+    }
+
+    private func startPlayback() {
+        guard item.id != nil else { return }
+        let startTicks = item.userData?.playbackPositionTicks ?? 0
+        playbackTarget = PlaybackTarget(item: item, startTicks: startTicks)
     }
 
     @ViewBuilder

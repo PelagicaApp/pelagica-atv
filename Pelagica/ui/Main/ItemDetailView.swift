@@ -11,7 +11,7 @@ struct ItemDetailRoute: Hashable {
     let item: BaseItemDto
 }
 
-private struct PlaybackTarget: Identifiable {
+struct PlaybackTarget: Identifiable {
     let id = UUID()
     let item: BaseItemDto
     let startTicks: Int
