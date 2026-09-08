@@ -25,6 +25,8 @@ struct VideoPlayerView: View {
     @State private var currentMediaSourceID: String?
     @State private var currentPlaySessionID: String?
     @State private var didFailToResolve = false
+    @State private var introRange: ClosedRange<TimeInterval>?
+    @State private var outroRange: ClosedRange<TimeInterval>?
 
     var body: some View {
         ZStack {
@@ -40,6 +42,8 @@ struct VideoPlayerView: View {
                     audioStreams: audioStreams,
                     selectedAudioStreamIndex: selectedAudioStreamIndex,
                     isTranscoded: isTranscoded,
+                    introRange: introRange,
+                    outroRange: outroRange,
                     onAudioTrackSelected: switchAudioTrack,
                     onProgress: reportProgress,
                     onStopped: reportStopped
@@ -62,7 +66,9 @@ struct VideoPlayerView: View {
             }
         }
         .task {
-            await resolvePlayback(atTicks: startTicks)
+            async let playback: Void = resolvePlayback(atTicks: startTicks)
+            async let intro: Void = fetchSkippableSegments()
+            _ = await (playback, intro)
         }
     }
 
@@ -190,6 +196,27 @@ struct VideoPlayerView: View {
         }
     }
 
+    private func fetchSkippableSegments() async {
+        guard let client = appState.client, let itemID = item.id else { return }
+        do {
+            let result = try await client.send(Paths.getItemSegments(itemID: itemID, includeSegmentTypes: [.intro, .outro])).value
+            for segment in result.items ?? [] {
+                guard
+                    let startTicks = segment.startTicks,
+                    let endTicks = segment.endTicks,
+                    endTicks > startTicks
+                else { continue }
+                let range = (Double(startTicks) / 10_000_000) ... (Double(endTicks) / 10_000_000)
+                switch segment.type {
+                case .intro: introRange = range
+                case .outro: outroRange = range
+                default: break
+                }
+            }
+        } catch {
+        }
+    }
+
     private func resolvedTranscodingURL(path: String, client: JellyfinClient) -> URL? {
         guard var components = URLComponents(string: path) else { return nil }
         let hasAPIKey = components.queryItems?.contains { $0.name.lowercased() == "api_key" } ?? false
@@ -257,6 +284,8 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
     let audioStreams: [MediaStream]
     let selectedAudioStreamIndex: Int?
     let isTranscoded: Bool
+    let introRange: ClosedRange<TimeInterval>?
+    let outroRange: ClosedRange<TimeInterval>?
     let onAudioTrackSelected: (Int, TimeInterval) -> Void
     let onProgress: (TimeInterval, Bool) -> Void
     let onStopped: (TimeInterval) -> Void
@@ -283,6 +312,7 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
             onAudioTrackSelected: onAudioTrackSelected,
             controller: controller
         )
+        context.coordinator.configureSkippableSegments(intro: introRange, outro: outroRange, controller: controller)
         player.play()
         return controller
     }
@@ -295,6 +325,7 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
             onAudioTrackSelected: onAudioTrackSelected,
             controller: uiViewController
         )
+        context.coordinator.configureSkippableSegments(intro: introRange, outro: outroRange, controller: uiViewController)
     }
 
     static func dismantleUIViewController(_ uiViewController: AVPlayerViewController, coordinator: Coordinator) {
@@ -335,6 +366,24 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
         private weak var reportedPlayer: AVPlayer?
         private var progressObserverToken: Any?
         private var onStopped: ((TimeInterval) -> Void)?
+
+        private enum SkipSegmentKind {
+            case intro
+            case outro
+
+            var title: String {
+                switch self {
+                case .intro: return "Skip Intro"
+                case .outro: return "Skip Outro"
+                }
+            }
+        }
+
+        private var introRange: ClosedRange<TimeInterval>?
+        private var outroRange: ClosedRange<TimeInterval>?
+        private weak var introObservedPlayer: AVPlayer?
+        private var introTimeObserverToken: Any?
+        private var visibleSkipSegment: SkipSegmentKind?
 
         func observe(_ item: AVPlayerItem) {
             statusObservation = item.observe(\.status, options: [.new]) { item, _ in
@@ -380,6 +429,67 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
                 reportedPlayer.removeTimeObserver(progressObserverToken)
             }
             progressObserverToken = nil
+            removeIntroObserver()
+        }
+
+        // MARK: Intro / outro skip
+
+        func configureSkippableSegments(
+            intro: ClosedRange<TimeInterval>?,
+            outro: ClosedRange<TimeInterval>?,
+            controller: AVPlayerViewController
+        ) {
+            self.controller = controller
+            guard introRange != intro || outroRange != outro else { return }
+            introRange = intro
+            outroRange = outro
+            removeIntroObserver()
+
+            guard (intro != nil || outro != nil), let player = controller.player else {
+                controller.contextualActions = []
+                return
+            }
+
+            introObservedPlayer = player
+            let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
+            introTimeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
+                self?.updateSkipActionVisibility(currentSeconds: time.seconds, intro: intro, outro: outro)
+            }
+        }
+
+        private func updateSkipActionVisibility(currentSeconds: Double, intro: ClosedRange<TimeInterval>?, outro: ClosedRange<TimeInterval>?) {
+            guard let controller else { return }
+
+            let active: (kind: SkipSegmentKind, seekTo: TimeInterval)?
+            if let intro, intro.contains(currentSeconds) {
+                active = (.intro, intro.upperBound)
+            } else if let outro, outro.contains(currentSeconds) {
+                active = (.outro, outro.upperBound)
+            } else {
+                active = nil
+            }
+
+            guard active?.kind != visibleSkipSegment else { return }
+            visibleSkipSegment = active?.kind
+            controller.contextualActions = active.map { [makeSkipAction(kind: $0.kind, seekingTo: $0.seekTo)] } ?? []
+        }
+
+        private func makeSkipAction(kind: SkipSegmentKind, seekingTo seconds: TimeInterval) -> UIAction {
+            UIAction(title: kind.title, image: UIImage(systemName: "forward.fill")) { [weak self] _ in
+                guard let self else { return }
+                self.controller?.player?.seek(to: CMTime(seconds: seconds, preferredTimescale: 600))
+                self.visibleSkipSegment = nil
+                self.controller?.contextualActions = []
+            }
+        }
+
+        private func removeIntroObserver() {
+            if let introTimeObserverToken, let introObservedPlayer {
+                introObservedPlayer.removeTimeObserver(introTimeObserverToken)
+            }
+            introTimeObserverToken = nil
+            introObservedPlayer = nil
+            visibleSkipSegment = nil
         }
 
         // MARK: Audio track menu
