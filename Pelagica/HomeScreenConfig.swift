@@ -152,7 +152,40 @@ extension HomeScreenConfig {
             title: "Favorites",
             items: SectionItemsConfig(limit: 10, isFavorite: true)
         )),
-        .nextUp(NextUpSection(title: "Next Up", limit: 20)),
+        .items(ItemsSection(
+            title: "Watchlist",
+            items: SectionItemsConfig(limit: 10, isInKefinTweaksWatchlist: true)
+        )),
+        .items(ItemsSection(
+            title: "Top Rated Anime",
+            items: SectionItemsConfig(
+                sortBy: [.communityRating],
+                tags: ["Anime", "anime"],
+                sortOrder: .descending,
+                limit: 10,
+            ),
+            detailFields: [.communityRating]
+        )),
+        .items(ItemsSection(
+            title: "Recently Released Anime",
+            items: SectionItemsConfig(
+                sortBy: [.premiereDate],
+                tags: ["Anime", "anime"],
+                sortOrder: .descending,
+                limit: 10,
+            ),
+            detailFields: [.releaseYearAndMonth]
+        )),
+        .items(ItemsSection(
+            title: "Recently Released Movies",
+            items: SectionItemsConfig(
+                sortBy: [.premiereDate],
+                types: [.movie],
+                sortOrder: .descending,
+                limit: 10,
+            ),
+            detailFields: [.releaseYearAndMonth],
+        )),
         .recentlyAdded(RecentlyAddedSection(title: "Recently Added", limit: 20)),
     ])
 }
