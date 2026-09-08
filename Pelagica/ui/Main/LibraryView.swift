@@ -12,13 +12,14 @@ struct LibraryView: View {
 
     @State private var libraries: [BaseItemDto] = []
     @State private var errorMessage: String?
-    
+    @State private var path = NavigationPath()
+
     private let supportedLibraryTypes: [CollectionType] = [.movies, .tvshows]
 
     private let columns = [GridItem(.adaptive(minimum: 380), spacing: 60)]
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ZStack {
                 Color.black.ignoresSafeArea()
 
@@ -49,6 +50,7 @@ struct LibraryView: View {
                 ItemDetailView(item: route.item)
             }
         }
+        .onDisappear { path = NavigationPath() }
         .task { await loadLibraries() }
     }
 

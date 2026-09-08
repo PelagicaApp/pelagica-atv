@@ -12,9 +12,10 @@ struct HomeTabView: View {
 
     @State private var slots: [HomeSlot] = []
     @State private var isLoadingConfig = true
+    @State private var path = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ZStack {
                 Color.black.ignoresSafeArea()
 
@@ -46,6 +47,7 @@ struct HomeTabView: View {
                 ItemDetailView(item: route.item)
             }
         }
+        .onDisappear { path = NavigationPath() }
         .task { await loadHome() }
     }
 
