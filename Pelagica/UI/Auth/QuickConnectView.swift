@@ -96,7 +96,6 @@ struct QuickConnectView: View {
                 
                 do {
                     let isAuthenticated = try await appState.checkQuickConnectStatus(server: server, secret: secret)
-                    debugPrint("isAuthenticated check: \(isAuthenticated)")
                     if isAuthenticated {
                         try await appState.authenticateQuickConnect(server: server, secret: secret)
                         return
