@@ -160,7 +160,7 @@ struct ItemDetailView: View {
 
     private var episodesRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: 32) {
+            LazyHStack(alignment: .top, spacing: 32) {
                 ForEach(episodes, id: \.id) { episode in
                     EpisodeCard(
                         episode: episode,
