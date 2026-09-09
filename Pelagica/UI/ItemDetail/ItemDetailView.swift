@@ -707,7 +707,7 @@ private struct EpisodeCard: View {
         let request = Paths.getItemImage(
             itemID: id,
             imageType: ImageType.primary.rawValue,
-            parameters: .init(fillWidth: 840, fillHeight: 473, tag: episode.imageTags?["Primary"])
+            parameters: .init(width: 840, height: 473, tag: episode.imageTags?["Primary"])
         )
         return client.url(with: request, queryAPIKey: true)
     }
