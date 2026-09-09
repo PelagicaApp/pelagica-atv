@@ -15,20 +15,19 @@ struct LoginMethodView: View {
 
             VStack(spacing: 20) {
                 Button {
-                    // Quick Connect isn't implemented yet.
+                    path.append(AuthRoute.quickConnect(server))
                 } label: {
                     Text("Sign in with Quick Connect")
                 }
                 .buttonStyle(PelagicaButtonStyle(emphasis: .primary))
-                .disabled(true)
-
+                
                 Button {
                     path.append(AuthRoute.login(server))
                 } label: {
                     Text("Sign in with username & password")
                 }
-                .buttonStyle(PelagicaButtonStyle(emphasis: .primary))
-
+                .buttonStyle(PelagicaButtonStyle(emphasis: .secondary))
+                
                 Button {
                     path.removeLast(path.count)
                 } label: {

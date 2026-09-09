@@ -17,6 +17,8 @@ struct AuthFlowView: View {
                         LoginMethodView(server: server, path: $path)
                     case .login(let server):
                         LoginView(server: server, path: $path)
+                    case .quickConnect(let server):
+                        QuickConnectView(server: server, path: $path)
                     }
                 }
         }
