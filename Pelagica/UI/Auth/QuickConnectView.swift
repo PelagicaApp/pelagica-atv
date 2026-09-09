@@ -30,6 +30,13 @@ struct QuickConnectView: View {
                             .foregroundStyle(.secondary)
                     }
                     if let code {
+                        if let quickConnectUrl = getQuickConnectUrl(code: code, server: server) {
+                            QRCodeView(content: quickConnectUrl.absoluteString)
+                                .frame(width: 250, height: 250)
+                                .padding(10)
+                                .background(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                        }
                         Text(code)
                             .font(.system(size: 64, weight: .bold, design: .monospaced))
                             .tracking(20)
@@ -46,7 +53,7 @@ struct QuickConnectView: View {
                 } label: {
                     Text("Back")
                 }
-                .buttonStyle(PelagicaButtonStyle(emphasis: .plain))
+                .buttonStyle(PelagicaButtonStyle(emphasis: .secondary))
             }
             .frame(maxWidth: 700)
         }
@@ -100,5 +107,18 @@ struct QuickConnectView: View {
                 }
             }
         }
+    }
+    
+    private func getQuickConnectUrl(code: String?, server: DiscoveredServer) -> URL? {
+        guard let code, !code.isEmpty else { return nil }
+        
+        guard var components = URLComponents(url: server.url, resolvingAgainstBaseURL: false) else {
+            return nil
+        }
+        
+        components.path = "/web/"
+        components.fragment = "/quickconnect?code=\(code)"
+        
+        return components.url
     }
 }
