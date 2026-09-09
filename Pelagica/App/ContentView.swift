@@ -11,10 +11,7 @@ struct ContentView: View {
     var body: some View {
         Group {
             if appState.isRestoringSession {
-                ZStack {
-                    Color.black.ignoresSafeArea()
-                    PelagicaIcon(size: 72)
-                }
+                PageLoadingView(text: "Restoring session...")
             } else if appState.isLoggedIn {
                 MainView()
             } else {
