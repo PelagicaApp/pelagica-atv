@@ -38,10 +38,10 @@ struct HomeMediaBar: View {
             backdrop
                 .id(currentItem?.id)
                 .ignoresSafeArea(edges: [.top, .horizontal])
-
+            
             scrim
                 .ignoresSafeArea(edges: [.top, .horizontal])
-
+            
             VStack(alignment: .leading, spacing: 24) {
                 titleBlock
                 metadataRow
@@ -54,6 +54,7 @@ struct HomeMediaBar: View {
             .padding(.horizontal, 90)
             .padding(.bottom, 90)
         }
+        .frame(height: 1100)
         .clipped()
         .task(id: currentItem?.id) {
             syncUserDataState()
