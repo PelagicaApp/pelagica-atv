@@ -25,6 +25,7 @@ struct ItemDetailView: View {
     @State private var nextEpisode: BaseItemDto?
     @State private var isWatchlist: Bool
     @State private var isTogglingWatchlist = false
+    @State private var similarItems: [BaseItemDto] = []
 
     @State private var seasons: [BaseItemDto] = []
     @State private var selectedSeasonID: String?
@@ -55,6 +56,10 @@ struct ItemDetailView: View {
                     if item.type == .series {
                         episodesSection
                     }
+                    
+                    if !similarItems.isEmpty {
+                        similarItemsSection
+                    }
                 }
                 .padding(.bottom, 60)
             }
@@ -64,6 +69,7 @@ struct ItemDetailView: View {
         .task {
             await loadFullItem()
             await loadLocalTrailer()
+            await laodSimilarItems()
             if item.type == .series {
                 await loadNextEpisode()
                 await loadSeasons()
@@ -113,6 +119,28 @@ struct ItemDetailView: View {
             .padding(.bottom, 90)
         }
         .clipped()
+    }
+    
+    // MARK: - Similar Items
+    
+    private var similarItemsSection: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            Text("More Like This")
+                .font(.system(size: 34, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(.leading, 90)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: 32) {
+                    ForEach(similarItems, id: \.id) { similarItem in
+                        ItemCard(item: similarItem)
+                            .frame(width: 280)
+                    }
+                }
+                .padding(.horizontal, 90)
+            }
+            .scrollClipDisabled()
+        }
     }
 
     // MARK: - Episodes
@@ -464,6 +492,16 @@ struct ItemDetailView: View {
             episodes = result.items ?? []
         } catch {
             episodes = []
+        }
+    }
+    
+    private func laodSimilarItems() async {
+        guard let client = appState.client, let itemID = item.id else { return }
+        do {
+            let result = try await client.send(Paths.getSimilarItems(itemID: itemID)).value
+            similarItems = result.items ?? []
+        } catch {
+            similarItems = []
         }
     }
 
