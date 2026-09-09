@@ -26,3 +26,7 @@ cd pelagica-atv
 4. Select the `Pelagica` scheme and an Apple TV simulator or a physical Apple TV as the run destination.
 5. If deploying to a physical Apple TV, select your own team under the target's _Signing & Capabilities_ tab so Xcode can code-sign the build.
 6. Build and run (`Cmd+R`).
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](./LICENSE) file for details.
