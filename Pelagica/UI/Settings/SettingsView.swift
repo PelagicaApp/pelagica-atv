@@ -8,6 +8,12 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
+    @State private var currentIconName: String? = UIApplication.shared.alternateIconName
+    
+    private let icons: [AppIconOption] = [
+        AppIconOption(name: nil, assetName: "AppIconDefault", label: "Default"),
+        AppIconOption(name: "AppIconPride", assetName: "AppIconPride", label: "Pride"),
+    ]
     
     var body: some View {
         ZStack {
@@ -20,6 +26,21 @@ struct SettingsView: View {
                 
                 SettingsSection(title: "Account") {
                     profileSection
+                }
+                
+                SettingsSection(title: "App Icon") {
+                    HStack(spacing: 34) {
+                        ForEach(icons) { icon in
+                            AppIconButton(
+                                icon: icon,
+                                isSelected: currentIconName == icon.name
+                            ) {
+                                changeAppIcon(to: icon.name)
+                            }
+                        }
+                        
+                        Spacer()
+                    }
                 }
                 
                 Text("Pelagica for AppleTV \(appVersionString)")
@@ -76,6 +97,54 @@ struct SettingsView: View {
         return client.url(with: request, queryAPIKey: true)
     }
     
+    // MARK: - App Icon section
+    
+    private func changeAppIcon(to iconName: String?) {
+        guard UIApplication.shared.supportsAlternateIcons else { return }
+        
+        UIApplication.shared.setAlternateIconName(iconName) { error in
+            if let error {
+                print("Failed to change icon: \(error.localizedDescription)")
+            } else {
+                currentIconName = iconName
+            }
+        }
+    }
+}
+
+private struct AppIconOption: Identifiable {
+    let name: String?
+    let assetName: String
+    let label: String
+    
+    var id: String { name ?? "default" }
+}
+
+private struct AppIconButton: View {
+    let icon: AppIconOption
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            Button(action: action) {
+                Image(icon.assetName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 200, height: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(isSelected ? Color.white : Color.white.opacity(0.1), lineWidth: isSelected ? 3 : 1)
+                    )
+            }
+            .buttonStyle(.card)
+            
+            Text(icon.label)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(isSelected ? .white : .secondary)
+        }
+    }
 }
 
 private struct SettingsSection<Content: View>: View {

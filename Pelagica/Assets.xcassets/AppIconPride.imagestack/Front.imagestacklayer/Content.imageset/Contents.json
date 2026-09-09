@@ -1,12 +1,12 @@
 {
   "images" : [
     {
-      "filename" : "Pelagica tvOS Middle@2x.png",
+      "filename" : "Pelagica tvOS Front Pride@2x.png",
       "idiom" : "tv",
       "scale" : "1x"
     },
     {
-      "filename" : "Pelagica tvOS Middle@4x.png",
+      "filename" : "Pelagica tvOS Front Pride@4x.png",
       "idiom" : "tv",
       "scale" : "2x"
     }
