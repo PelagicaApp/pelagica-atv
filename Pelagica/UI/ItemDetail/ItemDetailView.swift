@@ -49,7 +49,7 @@ struct ItemDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 60) {
                     hero
-                        .frame(height: proxy.size.height)
+                        .frame(height: proxy.size.height * 0.87)
                         .focusScope(heroNamespace)
                         .focusSection()
 
@@ -94,14 +94,14 @@ struct ItemDetailView: View {
     }
 
     private var hero: some View {
-        ZStack(alignment: .bottomLeading) {
+        ZStack(alignment: .center) {
             ZStack {
                 backdrop
                 scrim
             }
             .ignoresSafeArea(edges: [.top, .horizontal])
 
-            HStack(alignment: .center, spacing: 60) {
+            HStack(alignment: .top, spacing: 60) {
                 poster
 
                 VStack(alignment: .leading, spacing: 24) {
@@ -111,12 +111,11 @@ struct ItemDetailView: View {
                     overviewText
                     buttonsRow
                 }
-                .frame(maxWidth: 900, alignment: .leading)
 
                 Spacer()
             }
+            .padding(.top, 120)
             .padding(.horizontal, 90)
-            .padding(.bottom, 90)
         }
         .clipped()
     }
@@ -216,7 +215,7 @@ struct ItemDetailView: View {
     private var scrim: some View {
         ZStack {
             LinearGradient(
-                colors: [.black.opacity(0.95), .black.opacity(0.6), .clear],
+                colors: [.black, .black.opacity(0.6), .clear],
                 startPoint: .bottom,
                 endPoint: .top
             )
@@ -246,9 +245,13 @@ struct ItemDetailView: View {
                 }
             }
         }
-        .frame(width: 320, height: 480)
+        .frame(width: 400, height: 600)
         .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.5), radius: 30, y: 20)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.85), radius: 40, y: 25)
     }
 
     private var fallbackIcon: some View {
@@ -376,6 +379,7 @@ struct ItemDetailView: View {
             .buttonStyle(DetailActionButtonStyle(emphasis: .secondary))
             .disabled(isTogglingWatchlist)
         }
+        .padding(.top, 10)
     }
 
     private var playLabel: String {
