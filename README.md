@@ -31,11 +31,11 @@ This is the Apple TV app for [Pelagica](https://github.com/PelagicaApp/pelagica)
 
 ### App Store
 
-> The app isn't yet available on the App Store.
+> The app isn't yet available on the App Store yet.
 
 ### TestFlight
 
-> The app isn't yet available on TestFlight.
+You can join the [TestFlight beta](https://testflight.apple.com/join/CUsEZtDK) to try out beta builds of Pelagica for Apple TV. TestFlight builds may be unstable and are not guaranteed to work.
 
 ### Building it yourself
 
