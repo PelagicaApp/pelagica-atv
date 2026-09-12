@@ -29,7 +29,7 @@ struct LoginView: View {
                     Text(isLoggingIn ? "Signing in…" : "Login")
                 }
                 .buttonStyle(PelagicaButtonStyle(emphasis: .primary))
-                .disabled(username.isEmpty || password.isEmpty || isLoggingIn)
+                .disabled(username.isEmpty || isLoggingIn)
 
                 if let errorMessage {
                     Text(errorMessage)
@@ -50,7 +50,7 @@ struct LoginView: View {
     }
 
     private func signIn() {
-        guard !username.isEmpty, !password.isEmpty, !isLoggingIn else { return }
+        guard !username.isEmpty, !isLoggingIn else { return }
         errorMessage = nil
         isLoggingIn = true
         Task {
