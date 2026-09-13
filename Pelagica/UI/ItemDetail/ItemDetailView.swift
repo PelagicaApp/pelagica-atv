@@ -26,6 +26,7 @@ struct ItemDetailView: View {
     @State private var isWatchlist: Bool
     @State private var isTogglingWatchlist = false
     @State private var similarItems: [BaseItemDto] = []
+    @State private var collectionItems: [String: [BaseItemDto]] = [:]
 
     @State private var seasons: [BaseItemDto] = []
     @State private var selectedSeasonID: String?
@@ -57,6 +58,10 @@ struct ItemDetailView: View {
                         episodesSection
                     }
                     
+                    if !collectionItems.isEmpty {
+                        collectionItemsSection
+                    }
+                    
                     if !similarItems.isEmpty {
                         similarItemsSection
                     }
@@ -73,6 +78,9 @@ struct ItemDetailView: View {
             if item.type == .series {
                 await loadNextEpisode()
                 await loadSeasons()
+            }
+            if item.type == .movie {
+                await loadItemCollections()
             }
         }
         .fullScreenCover(item: $playbackTarget) { target in
@@ -139,6 +147,32 @@ struct ItemDetailView: View {
                 .padding(.horizontal, 90)
             }
             .scrollClipDisabled()
+        }
+    }
+    
+    // MARK: - Collection Items
+    
+    private var collectionItemsSection: some View {
+        VStack(alignment: .leading, spacing: 60) {
+            ForEach(collectionItems.sorted(by: { $0.key < $1.key }), id: \.key) { name, items in
+                VStack(alignment: .leading, spacing: 24) {
+                    Text(name)
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.leading, 90)
+                    
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(alignment: .top, spacing: 32) {
+                            ForEach(items, id: \.id) { similarItem in
+                                ItemCard(item: similarItem)
+                                    .frame(width: 280)
+                            }
+                        }
+                        .padding(.horizontal, 90)
+                    }
+                    .scrollClipDisabled()
+                }
+            }
         }
     }
 
@@ -506,6 +540,23 @@ struct ItemDetailView: View {
             similarItems = result.items ?? []
         } catch {
             similarItems = []
+        }
+    }
+    
+    private func loadItemCollections() async {
+        guard let client = appState.client, let itemID = item.id else { return }
+        do {
+            let result = try await client.send(Paths.getItemCollections(itemID: itemID)).value
+            guard let colls = result.items else { return }
+            for coll in colls {
+                guard let collName = coll.name else { continue }
+                let result = try await client.send(Paths.getItems(parameters: .init(locationTypes: [LocationType.fileSystem], parentID: coll.id))).value
+                guard let items = result.items else { continue }
+                if items.isEmpty { continue }
+                collectionItems[collName] = items
+            }
+        } catch {
+            
         }
     }
 
