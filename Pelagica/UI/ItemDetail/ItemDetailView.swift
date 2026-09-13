@@ -201,6 +201,7 @@ struct ItemDetailView: View {
             let nextUp = try await client.send(Paths.getNextUp(parameters: .init(
                 userID: appState.currentUser?.id,
                 limit: 1,
+                fields: [.overview],
                 seriesID: seriesID
             ))).value
             if let episode = nextUp.items?.first {
@@ -210,6 +211,7 @@ struct ItemDetailView: View {
 
             let episodes = try await client.send(Paths.getEpisodes(seriesID: seriesID, parameters: .init(
                 userID: appState.currentUser?.id,
+                fields: [.overview],
                 limit: 1
             ))).value
             nextEpisode = episodes.items?.first

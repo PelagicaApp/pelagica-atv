@@ -29,6 +29,7 @@ struct VideoPlayerView: View {
     @State private var didFailToResolve = false
     @State private var introRange: ClosedRange<TimeInterval>?
     @State private var outroRange: ClosedRange<TimeInterval>?
+    @State private var posterImageData: Data?
 
     init(item: BaseItemDto, startTicks: Int = 0) {
         self.item = item
@@ -47,6 +48,7 @@ struct VideoPlayerView: View {
                     title: playerTitle,
                     subtitle: playerSubtitle,
                     overview: currentItem.overview,
+                    posterImageData: posterImageData,
                     audioStreams: audioStreams,
                     selectedAudioStreamIndex: selectedAudioStreamIndex,
                     isTranscoded: isTranscoded,
@@ -79,10 +81,12 @@ struct VideoPlayerView: View {
             didFailToResolve = false
             introRange = nil
             outroRange = nil
+            posterImageData = nil
             let ticks = currentItem.id == item.id ? startTicks : 0
             async let playback: Void = resolvePlayback(atTicks: ticks)
             async let intro: Void = fetchSkippableSegments()
-            _ = await (playback, intro)
+            async let poster: Void = loadPosterImage()
+            _ = await (playback, intro, poster)
         }
     }
 
@@ -121,7 +125,7 @@ struct VideoPlayerView: View {
         do {
             let result = try await client.send(Paths.getEpisodes(
                 seriesID: seriesID,
-                parameters: .init(userID: appState.currentUser?.id, adjacentTo: episodeID, enableUserData: true)
+                parameters: .init(userID: appState.currentUser?.id, fields: [.overview], adjacentTo: episodeID, enableUserData: true)
             )).value
             guard
                 let items = result.items,
@@ -267,6 +271,23 @@ struct VideoPlayerView: View {
         }
     }
 
+    private func loadPosterImage() async {
+        guard let client = appState.client, let id = currentItem.id else { return }
+        let request = Paths.getItemImage(
+            itemID: id,
+            imageType: ImageType.primary.rawValue,
+            parameters: .init(fillWidth: 640, fillHeight: 960, tag: currentItem.imageTags?["Primary"])
+        )
+        guard let url = client.url(with: request, queryAPIKey: true) else { return }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            posterImageData = data
+        } catch {
+            // The info panel just won't show artwork if the poster fails to load.
+        }
+    }
+
     private func resolvedTranscodingURL(path: String, client: JellyfinClient) -> URL? {
         guard var components = URLComponents(string: path) else { return nil }
         let hasAPIKey = components.queryItems?.contains { $0.name.lowercased() == "api_key" } ?? false
@@ -331,6 +352,7 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
     let title: String
     var subtitle: String?
     var overview: String?
+    var posterImageData: Data?
     let audioStreams: [MediaStream]
     let selectedAudioStreamIndex: Int?
     let isTranscoded: Bool
@@ -369,6 +391,7 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
+        uiViewController.player?.currentItem?.externalMetadata = metadataItems()
         context.coordinator.configureAudioMenu(
             streams: audioStreams,
             selectedIndex: selectedAudioStreamIndex,
@@ -393,6 +416,9 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
         if let overview {
             items.append(makeMetadataItem(identifier: .commonIdentifierDescription, value: overview))
         }
+        if let posterImageData {
+            items.append(makeArtworkMetadataItem(data: posterImageData))
+        }
         return items
     }
 
@@ -402,6 +428,19 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
         item.value = value as NSString
         item.extendedLanguageTag = "und"
         return item
+    }
+
+    private func makeArtworkMetadataItem(data: Data) -> AVMetadataItem {
+        let item = AVMutableMetadataItem()
+        item.identifier = .commonIdentifierArtwork
+        item.value = data as NSData
+        item.dataType = isPNG(data) ? kCMMetadataBaseDataType_PNG as String : kCMMetadataBaseDataType_JPEG as String
+        item.extendedLanguageTag = "und"
+        return item
+    }
+
+    private func isPNG(_ data: Data) -> Bool {
+        data.starts(with: [0x89, 0x50, 0x4E, 0x47])
     }
 
     final class Coordinator: NSObject {
