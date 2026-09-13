@@ -164,7 +164,7 @@ struct ItemDetailHeroSection: View {
         if let genres = item.genres, !genres.isEmpty {
             Text(genres.joined(separator: " ⋅ "))
                 .font(.system(size: 22))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.white.opacity(0.6))
         }
     }
 

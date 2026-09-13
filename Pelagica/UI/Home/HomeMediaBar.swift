@@ -164,7 +164,7 @@ struct HomeMediaBar: View {
     private var genresText: some View {
         Text(currentItem?.genres?.joined(separator: " ⋅ ") ?? "")
             .font(.system(size: 22))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.white.opacity(0.6))
             .lineLimit(1)
             .frame(height: 34, alignment: .leading)
     }
