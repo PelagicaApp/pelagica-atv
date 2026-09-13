@@ -130,6 +130,14 @@ struct HomeTabView: View {
                     .frame(width: 420)
                 }
             }
+
+        case .library:
+            HomeSectionRow(title: row.title) {
+                ForEach(row.items.indices, id: \.self) { index in
+                    HomeLibraryCard(library: row.items[index])
+                        .frame(width: 420)
+                }
+            }
         }
     }
 
@@ -218,12 +226,31 @@ struct HomeTabView: View {
                 kind: .poster(detailText: { Self.detailFieldsText(for: $0, fields: fields) }, useThumb: useThumb)
             )]
 
+        case .libraries(let section):
+            let items = await fetchLibraries(client: client)
+            guard !items.isEmpty else { return [] }
+            return [HomeRow(title: section.title ?? "Libraries", items: items, kind: .library)]
+
         case .mediaBar, .unsupported:
             return []
         }
     }
 
     // MARK: - Fetching
+
+    private static let supportedLibraryCollectionTypes: Set<CollectionType> = [.movies, .tvshows, .boxsets]
+
+    private func fetchLibraries(client: JellyfinClient) async -> [BaseItemDto] {
+        guard let userID = appState.currentUser?.id else { return [] }
+        do {
+            let result = try await client.send(Paths.getUserViews(parameters: .init(userID: userID))).value
+            return (result.items ?? []).filter { view in
+                view.collectionType.map(Self.supportedLibraryCollectionTypes.contains) ?? false
+            }
+        } catch {
+            return []
+        }
+    }
 
     private func fetchItems(config: SectionItemsConfig?, client: JellyfinClient, fallbackLimit: Int) async -> [BaseItemDto] {
         guard let userID = appState.currentUser?.id else { return [] }
@@ -388,7 +415,7 @@ struct HomeTabView: View {
 
     nonisolated private static func skeletonKind(for section: HomeScreenSection) -> HomeSlot.SkeletonKind {
         switch section {
-        case .continueWatching, .nextUp, .resume:
+        case .continueWatching, .nextUp, .resume, .libraries:
             return .landscape
         case .items(let section):
             return section.useThumbImage == true ? .landscape : .poster
@@ -407,6 +434,8 @@ struct HomeTabView: View {
             return section.title ?? "Resume"
         case .items(let section):
             return section.title ?? ""
+        case .libraries(let section):
+            return section.title ?? "Libraries"
         case .recentlyAdded, .mediaBar, .unsupported:
             return nil
         }
@@ -519,6 +548,7 @@ struct HomeTabView: View {
 private enum HomeRowKind {
     case poster(detailText: (BaseItemDto) -> String, useThumb: Bool)
     case continueStyle(titleLine: ContinueWatchingTitleLine?, detailLines: [ContinueWatchingDetailLine]?)
+    case library
 }
 
 private struct HomeRow: Identifiable {

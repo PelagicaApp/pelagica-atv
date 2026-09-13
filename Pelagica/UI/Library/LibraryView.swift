@@ -9,6 +9,7 @@ import SwiftUI
 
 struct LibraryView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var navigationCoordinator: TabNavigationCoordinator
 
     @State private var libraries: [BaseItemDto] = []
     @State private var errorMessage: String?
@@ -52,6 +53,11 @@ struct LibraryView: View {
         }
         .onDisappear { path = NavigationPath() }
         .task { await loadLibraries() }
+        .onChange(of: navigationCoordinator.pendingLibrary) { _, pendingLibrary in
+            guard let pendingLibrary else { return }
+            path.append(pendingLibrary)
+            navigationCoordinator.pendingLibrary = nil
+        }
     }
 
     private func loadLibraries() async {

@@ -127,6 +127,10 @@ struct ResumeSection: Decodable {
     var limit: Int?
 }
 
+struct LibrariesSection: Decodable {
+    var title: String?
+}
+
 enum HomeScreenSection: Decodable {
     case mediaBar(MediaBarSection)
     case recentlyAdded(RecentlyAddedSection)
@@ -134,6 +138,7 @@ enum HomeScreenSection: Decodable {
     case continueWatching(ContinueWatchingSection)
     case nextUp(NextUpSection)
     case resume(ResumeSection)
+    case libraries(LibrariesSection)
     case unsupported
 
     private enum CodingKeys: String, CodingKey {
@@ -155,6 +160,7 @@ enum HomeScreenSection: Decodable {
         case "continueWatching": self = .continueWatching(try ContinueWatchingSection(from: decoder))
         case "nextUp": self = .nextUp(try NextUpSection(from: decoder))
         case "resume": self = .resume(try ResumeSection(from: decoder))
+        case "libraries": self = .libraries(try LibrariesSection(from: decoder))
         default: self = .unsupported
         }
     }
