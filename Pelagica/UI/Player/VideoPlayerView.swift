@@ -653,6 +653,7 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
                 assReadyObservation = item.observe(\.status, options: [.new]) { [weak self, weak controller] item, _ in
                     guard item.status == .readyToPlay, let self, let controller else { return }
                     DispatchQueue.main.async {
+                        guard let view = self.assSubtitlesView else { return }
                         self.attachAssSubtitlesView(view, to: controller)
                         self.assReadyObservation = nil
                     }
