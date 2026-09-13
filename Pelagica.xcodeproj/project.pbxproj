@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		3D72E953304D968900733911 /* JellyfinAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 3D72E952304D968900733911 /* JellyfinAPI */; };
+		3DDCF42E3057026D00AD144C /* SwiftAssRenderer in Frameworks */ = {isa = PBXBuildFile; productRef = ADEC04E562074E819CB77DCD /* SwiftAssRenderer */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,6 +28,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3DDCF42E3057026D00AD144C /* SwiftAssRenderer in Frameworks */,
 				3D72E953304D968900733911 /* JellyfinAPI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -71,6 +73,7 @@
 			name = Pelagica;
 			packageProductDependencies = (
 				3D72E952304D968900733911 /* JellyfinAPI */,
+				ADEC04E562074E819CB77DCD /* SwiftAssRenderer */,
 			);
 			productName = Pelagica;
 			productReference = 3D72E93D304D940200733911 /* Pelagica.app */;
@@ -102,6 +105,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				3D72E951304D968900733911 /* XCRemoteSwiftPackageReference "jellyfin-sdk-swift" */,
+				A12597F316C009C158E869A1 /* XCRemoteSwiftPackageReference "swift-ass-renderer" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3D72E93E304D940200733911 /* Products */;
@@ -351,6 +355,14 @@
 				minimumVersion = 3.1.0;
 			};
 		};
+		A12597F316C009C158E869A1 /* XCRemoteSwiftPackageReference "swift-ass-renderer" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mihai8804858/swift-ass-renderer";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.3.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -358,6 +370,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3D72E951304D968900733911 /* XCRemoteSwiftPackageReference "jellyfin-sdk-swift" */;
 			productName = JellyfinAPI;
+		};
+		ADEC04E562074E819CB77DCD /* SwiftAssRenderer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A12597F316C009C158E869A1 /* XCRemoteSwiftPackageReference "swift-ass-renderer" */;
+			productName = SwiftAssRenderer;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
