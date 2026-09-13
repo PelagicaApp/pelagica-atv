@@ -236,8 +236,9 @@ struct ItemDetailView: View {
         do {
             let result = try await client.send(Paths.getEpisodes(seriesID: seriesID, parameters: .init(
                 userID: appState.currentUser?.id,
+                fields: [.overview],
                 seasonID: seasonID,
-                enableUserData: true
+                enableUserData: true,
             ))).value
             episodes = result.items ?? []
         } catch {

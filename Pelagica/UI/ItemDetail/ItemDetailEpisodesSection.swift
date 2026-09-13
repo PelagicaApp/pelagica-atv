@@ -128,7 +128,7 @@ private struct EpisodeCard: View {
             if let overview = episode.overview, !overview.isEmpty {
                 Text(overview)
                     .font(.system(size: 20))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.6))
                     .lineLimit(2)
             }
 
