@@ -6,7 +6,7 @@
 import Foundation
 
 enum PelagicaPluginAPI {
-    static func fetchHomeScreenConfig(serverURL: URL) async -> HomeScreenConfig {
+    static func fetchConfig(serverURL: URL) async -> AppConfig {
         let url = serverURL.appendingPathComponent("Pelagica").appendingPathComponent("Config")
 
         do {
@@ -14,7 +14,7 @@ enum PelagicaPluginAPI {
             guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
                 return .fallback
             }
-            return try JSONDecoder().decode(HomeScreenConfig.self, from: data)
+            return try JSONDecoder().decode(AppConfig.self, from: data)
         } catch {
             return .fallback
         }

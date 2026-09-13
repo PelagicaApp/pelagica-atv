@@ -1,5 +1,5 @@
 //
-//  HomeScreenConfig.swift
+//  AppConfig.swift
 //  Pelagica
 //
 
@@ -51,6 +51,17 @@ enum ContinueWatchingDetailLine: String, Decodable {
     case endsAt = "EndsAt"
     case parentTitle = "ParentTitle"
     case none = "None"
+}
+
+enum CollectionSortOption: String, Decodable {
+    case premiereDateAsc = "PremiereDateAsc"
+    case premiereDateDesc = "PremiereDateDesc"
+    case random = "Random"
+}
+
+struct ItemPageSettings: Decodable {
+    var showCollections: Bool?
+    var collectionSort: CollectionSortOption?
 }
 
 struct MediaBarSection: Decodable {
@@ -131,12 +142,13 @@ enum HomeScreenSection: Decodable {
     }
 }
 
-struct HomeScreenConfig: Decodable {
+struct AppConfig: Decodable {
     var homeScreenSections: [HomeScreenSection]?
+    var itemPage: ItemPageSettings?
 }
 
-extension HomeScreenConfig {
-    static let fallback = HomeScreenConfig(homeScreenSections: [
+extension AppConfig {
+    static let fallback = AppConfig(homeScreenSections: [
         .mediaBar(MediaBarSection(
             items: SectionItemsConfig(sortBy: [.random], types: [.movie, .series]),
             showFavoriteButton: true,

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ItemDetailView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var configStore: AppConfigStore
     @Environment(\.openURL) private var openURL
 
     @State private var item: BaseItemDto
@@ -79,7 +80,9 @@ struct ItemDetailView: View {
                 await loadSeasons()
             }
             if item.type == .movie {
-                await loadItemCollections()
+                if configStore.config.itemPage?.showCollections != false {
+                    await loadItemCollections()
+                }
             }
         }
         .fullScreenCover(item: $playbackTarget) { target in
@@ -254,6 +257,7 @@ struct ItemDetailView: View {
 
     private func loadItemCollections() async {
         guard let client = appState.client, let itemID = item.id else { return }
+        let sort = configStore.config.itemPage?.collectionSort ?? .premiereDateAsc
         do {
             let result = try await client.send(Paths.getItemCollections(itemID: itemID)).value
             guard let colls = result.items else { return }
@@ -262,7 +266,7 @@ struct ItemDetailView: View {
                 let result = try await client.send(Paths.getItems(parameters: .init(locationTypes: [LocationType.fileSystem], parentID: coll.id))).value
                 guard let items = result.items else { continue }
                 if items.isEmpty { continue }
-                collectionItems[collName] = items
+                collectionItems[collName] = CollectionSorting.sort(items, by: sort)
             }
         } catch {
 
@@ -279,4 +283,5 @@ struct ItemDetailView: View {
 #Preview {
     ItemDetailView(item: BaseItemDto(name: "Preview Item", overview: "A short preview overview."))
         .environmentObject(AppState())
+        .environmentObject(AppConfigStore())
 }

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct HomeTabView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var configStore: AppConfigStore
 
     @State private var slots: [HomeSlot] = []
     @State private var isLoadingConfig = true
@@ -140,8 +141,7 @@ struct HomeTabView: View {
             return
         }
 
-        let config = await PelagicaPluginAPI.fetchHomeScreenConfig(serverURL: client.configuration.url)
-        let allSections = config.homeScreenSections ?? []
+        let allSections = configStore.config.homeScreenSections ?? []
 
         let mediaBarSection = allSections.compactMap { section -> MediaBarSection? in
             guard case .mediaBar(let mediaBar) = section else { return nil }
@@ -541,4 +541,5 @@ private struct HomeSlot: Identifiable {
 #Preview {
     HomeTabView()
         .environmentObject(AppState())
+        .environmentObject(AppConfigStore())
 }
