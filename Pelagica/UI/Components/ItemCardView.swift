@@ -13,10 +13,11 @@ struct ItemCard: View {
     var detailText: (BaseItemDto) -> String = { item in
         item.premiereDate.map { String(Calendar.current.component(.year, from: $0)) } ?? ""
     }
-    
+    var useThumb: Bool = false
+
     private let cornerRadius: CGFloat = 16
-    private let posterAspectRatio: CGFloat = 2.0 / 3.0
-    
+    private var posterAspectRatio: CGFloat { useThumb ? 16.0 / 9.0 : 2.0 / 3.0 }
+
     @State private var measuredWidth: CGFloat?
     
     var body: some View {
@@ -91,14 +92,27 @@ struct ItemCard: View {
         
         let pixelWidth = Int((measuredWidth * displayScale).rounded())
         let pixelHeight = Int((measuredWidth * displayScale / posterAspectRatio).rounded())
-        
+
+        let imageType: ImageType
+        let tag: String?
+        if useThumb, let thumbTag = item.imageTags?["Thumb"] {
+            imageType = .thumb
+            tag = thumbTag
+        } else if useThumb, let backdropTag = item.backdropImageTags?.first {
+            imageType = .backdrop
+            tag = backdropTag
+        } else {
+            imageType = .primary
+            tag = item.imageTags?["Primary"]
+        }
+
         let request = Paths.getItemImage(
             itemID: id,
-            imageType: ImageType.primary.rawValue,
+            imageType: imageType.rawValue,
             parameters: .init(
                 fillWidth: pixelWidth,
                 fillHeight: pixelHeight,
-                tag: item.imageTags?["Primary"]
+                tag: tag
             )
         )
         return client.url(with: request, queryAPIKey: true)

@@ -110,11 +110,11 @@ struct HomeTabView: View {
     @ViewBuilder
     private func rowView(for row: HomeRow) -> some View {
         switch row.kind {
-        case .poster(let detailText):
+        case .poster(let detailText, let useThumb):
             HomeSectionRow(title: row.title) {
                 ForEach(row.items.indices, id: \.self) { index in
-                    ItemCard(item: row.items[index], detailText: detailText)
-                        .frame(width: 280)
+                    ItemCard(item: row.items[index], detailText: detailText, useThumb: useThumb)
+                        .frame(width: useThumb ? 420 : 280)
                 }
             }
 
@@ -211,10 +211,11 @@ struct HomeTabView: View {
         case .items(let section):
             let items = await fetchItems(config: section.items, client: client, fallbackLimit: 20)
             let fields = section.detailFields
+            let useThumb = section.useThumbImage ?? false
             return [HomeRow(
                 title: section.title ?? "",
                 items: items,
-                kind: .poster(detailText: { Self.detailFieldsText(for: $0, fields: fields) })
+                kind: .poster(detailText: { Self.detailFieldsText(for: $0, fields: fields) }, useThumb: useThumb)
             )]
 
         case .mediaBar, .unsupported:
@@ -370,7 +371,7 @@ struct HomeTabView: View {
                             enableUserData: true
                         ))).value
                         guard let items = result.items, !items.isEmpty else { return (index, nil) }
-                        return (index, HomeRow(title: "Recently Added in \(name)", items: items, kind: .poster(detailText: Self.defaultDetailText)))
+                        return (index, HomeRow(title: "Recently Added in \(name)", items: items, kind: .poster(detailText: Self.defaultDetailText, useThumb: false)))
                     } catch {
                         return (index, nil)
                     }
@@ -389,7 +390,9 @@ struct HomeTabView: View {
         switch section {
         case .continueWatching, .nextUp, .resume:
             return .landscape
-        case .items, .recentlyAdded, .mediaBar, .unsupported:
+        case .items(let section):
+            return section.useThumbImage == true ? .landscape : .poster
+        case .recentlyAdded, .mediaBar, .unsupported:
             return .poster
         }
     }
@@ -514,7 +517,7 @@ struct HomeTabView: View {
 }
 
 private enum HomeRowKind {
-    case poster(detailText: (BaseItemDto) -> String)
+    case poster(detailText: (BaseItemDto) -> String, useThumb: Bool)
     case continueStyle(titleLine: ContinueWatchingTitleLine?, detailLines: [ContinueWatchingDetailLine]?)
 }
 
