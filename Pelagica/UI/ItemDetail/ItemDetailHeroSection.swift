@@ -8,6 +8,7 @@ import SwiftUI
 
 struct ItemDetailHeroSection: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var configStore: AppConfigStore
 
     let item: BaseItemDto
     let isWatchlist: Bool
@@ -33,7 +34,7 @@ struct ItemDetailHeroSection: View {
 
                 VStack(alignment: .leading, spacing: 24) {
                     titleBlock
-                    metadataRow
+                    detailBadgesRow
                     genresText
                     overviewText
                     buttonsRow
@@ -129,50 +130,33 @@ struct ItemDetailHeroSection: View {
             .foregroundStyle(.white)
     }
 
-    // MARK: - Metadata
+    // MARK: - Detail Badges
 
-    private var metadataRow: some View {
-        HStack(spacing: 20) {
-            if let year = item.productionYear {
-                Text(year, format: .number.grouping(.never))
-            }
+    private var detailBadgesRow: some View {
+        let types = configStore.config.itemPage?.detailBadges ?? DetailBadges.defaultBadges
+        let badges = types.compactMap { DetailBadges.value(for: item, type: $0) }
 
-            if let rating = item.communityRating {
-                HStack(spacing: 6) {
-                    Image(systemName: "star.fill")
-                    Text(String(format: "%.1f", rating))
+        return Group {
+            if !badges.isEmpty {
+                HStack(spacing: 20) {
+                    ForEach(Array(badges.enumerated()), id: \.offset) { _, badge in
+                        detailBadge(badge)
+                    }
                 }
-            }
-
-            if let durationText {
-                Text(durationText)
-            }
-
-            if let officialRating = item.officialRating {
-                Text(officialRating)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color.white.opacity(0.4), lineWidth: 1.5)
-                    )
+                .font(.system(size: 22, weight: .medium))
+                .foregroundStyle(.white)
             }
         }
-        .font(.system(size: 22, weight: .medium))
-        .foregroundStyle(.white)
     }
 
-    private var durationText: String? {
-        if item.type == .series {
-            let seasonCount = item.childCount ?? 1
-            return seasonCount == 1 ? "1 Season" : "\(seasonCount) Seasons"
+    private func detailBadge(_ badge: DetailBadgeValue) -> some View {
+        HStack(spacing: 6) {
+            if let icon = badge.icon {
+                Image(systemName: icon == .star ? "star" : "medal")
+            }
+            Text(badge.text)
         }
-
-        guard let ticks = item.runTimeTicks else { return nil }
-        let totalMinutes = Int(Double(ticks) / 600_000_000)
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-        return hours > 0 ? "\(hours)h \(minutes)m" : "\(minutes)m"
+        
     }
 
     @ViewBuilder

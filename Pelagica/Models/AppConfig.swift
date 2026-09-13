@@ -59,9 +59,26 @@ enum CollectionSortOption: String, Decodable {
     case random = "Random"
 }
 
+enum DetailBadge: String, Decodable {
+    case releaseYear = "ReleaseYear"
+    case releaseYearAndMonth = "ReleaseYearAndMonth"
+    case releaseDate = "ReleaseDate"
+    case communityRating = "CommunityRating"
+    case criticsRating = "CriticsRating"
+    case playDuration = "PlayDuration"
+    case playEnd = "PlayEnd"
+    case seasonCount = "SeasonCount"
+    case episodeCount = "EpisodeCount"
+    case ageRating = "AgeRating"
+    case episodeNumber = "EpisodeNumber"
+    case duration = "Duration"
+    case videoQuality = "VideoQuality"
+}
+
 struct ItemPageSettings: Decodable {
     var showCollections: Bool?
     var collectionSort: CollectionSortOption?
+    var detailBadges: [DetailBadge]?
 }
 
 struct MediaBarSection: Decodable {
