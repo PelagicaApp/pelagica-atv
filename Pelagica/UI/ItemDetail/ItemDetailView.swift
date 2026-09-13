@@ -38,6 +38,7 @@ struct ItemDetailView: View {
     @Namespace private var heroNamespace
     @Namespace private var seasonsNamespace
     @Namespace private var episodesNamespace
+    @Namespace private var similarNamespace
     @FocusState private var isPlayButtonFocused: Bool
 
     init(item: BaseItemDto) {
@@ -136,42 +137,29 @@ struct ItemDetailView: View {
                 .font(.system(size: 34, weight: .bold))
                 .foregroundStyle(.white)
                 .padding(.leading, 90)
-            
+
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: 32) {
                     ForEach(similarItems, id: \.id) { similarItem in
                         ItemCard(item: similarItem)
                             .frame(width: 280)
+                            .prefersDefaultFocus(similarItem.id == similarItems.first?.id, in: similarNamespace)
                     }
                 }
                 .padding(.horizontal, 90)
             }
             .scrollClipDisabled()
         }
+        .focusScope(similarNamespace)
+        .focusSection()
     }
-    
+
     // MARK: - Collection Items
-    
+
     private var collectionItemsSection: some View {
         VStack(alignment: .leading, spacing: 60) {
             ForEach(collectionItems.sorted(by: { $0.key < $1.key }), id: \.key) { name, items in
-                VStack(alignment: .leading, spacing: 24) {
-                    Text(name)
-                        .font(.system(size: 34, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.leading, 90)
-                    
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(alignment: .top, spacing: 32) {
-                            ForEach(items, id: \.id) { similarItem in
-                                ItemCard(item: similarItem)
-                                    .frame(width: 280)
-                            }
-                        }
-                        .padding(.horizontal, 90)
-                    }
-                    .scrollClipDisabled()
-                }
+                CollectionRow(name: name, items: items)
             }
         }
     }
@@ -656,6 +644,36 @@ private struct SeasonPillButtonStyle: ButtonStyle {
                 .scaleEffect(configuration.isPressed ? 0.97 : (isFocused ? 1.05 : 1))
                 .animation(.easeOut(duration: 0.14), value: isFocused)
         }
+    }
+}
+
+private struct CollectionRow: View {
+    let name: String
+    let items: [BaseItemDto]
+
+    @Namespace private var rowNamespace
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            Text(name)
+                .font(.system(size: 34, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(.leading, 90)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: 32) {
+                    ForEach(items, id: \.id) { item in
+                        ItemCard(item: item)
+                            .frame(width: 280)
+                            .prefersDefaultFocus(item.id == items.first?.id, in: rowNamespace)
+                    }
+                }
+                .padding(.horizontal, 90)
+            }
+            .scrollClipDisabled()
+        }
+        .focusScope(rowNamespace)
+        .focusSection()
     }
 }
 
