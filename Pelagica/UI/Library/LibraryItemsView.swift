@@ -10,7 +10,26 @@ import SwiftUI
 struct LibraryItemsView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
-    let library: BaseItemDto
+    let title: String
+    let emptyMessage: String
+    let query: Query
+
+    enum Query {
+        case library(id: String?)
+        case genre(id: String)
+    }
+
+    init(library: BaseItemDto) {
+        title = library.name ?? "Library"
+        emptyMessage = "This library doesn't have any items in it."
+        query = .library(id: library.id)
+    }
+
+    init(genre: GenreRoute) {
+        title = genre.name
+        emptyMessage = "There's nothing in this genre."
+        query = .genre(id: genre.id)
+    }
 
     @State private var items: [BaseItemDto] = []
     @State private var totalCount: Int?
@@ -36,7 +55,7 @@ struct LibraryItemsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 32) {
                     HStack {
-                        Text(library.name ?? "Library")
+                        Text(title)
                             .font(.system(size: 40, weight: .bold))
                             .foregroundStyle(.white)
 
@@ -109,7 +128,7 @@ struct LibraryItemsView: View {
                 .font(.system(size: 28, weight: .semibold))
                 .foregroundStyle(.white)
             
-            Text("This library doesn't have any items in it.")
+            Text(emptyMessage)
                 .font(.system(size: 20))
                 .foregroundStyle(.secondary)
             
@@ -140,17 +159,27 @@ struct LibraryItemsView: View {
     private func loadMore() async {
         let requestedSortKey = sortKey
         defer { isLoadingMore = false }
-        guard let client = appState.client, let libraryID = library.id else { return }
+        guard let client = appState.client else { return }
+        var parameters = Paths.GetItemsParameters(
+            userID: appState.currentUser?.id,
+            startIndex: items.count,
+            limit: batchSize,
+            sortOrder: [sortOrder],
+            sortBy: [sortBy]
+        )
+        switch query {
+        case .library(let id):
+            guard let id else { return }
+            parameters.isRecursive = false
+            parameters.parentID = id
+        case .genre(let id):
+            parameters.isRecursive = true
+            parameters.includeItemTypes = [.movie, .series]
+            parameters.excludeItemTypes = [.collectionFolder]
+            parameters.genreIDs = [id]
+        }
         do {
-            let result = try await client.send(Paths.getItems(parameters: .init(
-                userID: appState.currentUser?.id,
-                startIndex: items.count,
-                limit: batchSize,
-                isRecursive: false,
-                sortOrder: [sortOrder],
-                parentID: libraryID,
-                sortBy: [sortBy]
-            ))).value
+            let result = try await client.send(Paths.getItems(parameters: parameters)).value
             guard requestedSortKey == sortKey else { return }
             items.append(contentsOf: result.items ?? [])
             totalCount = result.totalRecordCount ?? items.count

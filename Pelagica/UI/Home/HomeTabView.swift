@@ -62,7 +62,7 @@ struct HomeTabView: View {
                                                 .focusSection()
                                         } else {
                                             ForEach(slot.rows) { row in
-                                                if !row.items.isEmpty {
+                                                if !row.isEmpty {
                                                     rowView(for: row)
                                                         .focusSection()
                                                 }
@@ -80,6 +80,9 @@ struct HomeTabView: View {
             .ignoresSafeArea(edges: hasMediaBarSection ? [.top, .horizontal] : [])
             .navigationDestination(for: ItemDetailRoute.self) { route in
                 ItemDetailView(item: route.item)
+            }
+            .navigationDestination(for: GenreRoute.self) { route in
+                LibraryItemsView(genre: route)
             }
         }
         .onDisappear { path = NavigationPath() }
@@ -138,6 +141,14 @@ struct HomeTabView: View {
                         .frame(width: 420)
                 }
             }
+
+        case .genres(let genres):
+            HomeSectionRow(title: row.title) {
+                ForEach(genres) { genre in
+                    HomeGenreCard(genre: genre)
+                        .frame(width: 420)
+                }
+            }
         }
     }
 
@@ -192,7 +203,7 @@ struct HomeTabView: View {
         case .continueWatching(let section):
             let items = await fetchContinueWatching(client: client, limit: section.limit ?? 20)
             return [HomeRow(
-                title: section.title ?? "Continue Watching",
+                title: section.title.orDefault("Continue Watching"),
                 items: items,
                 kind: .continueStyle(titleLine: section.titleLine, detailLines: section.detailLine)
             )]
@@ -200,7 +211,7 @@ struct HomeTabView: View {
         case .nextUp(let section):
             let items = await fetchNextUp(client: client, limit: section.limit ?? 20)
             return [HomeRow(
-                title: section.title ?? "Next Up",
+                title: section.title.orDefault("Next Up"),
                 items: items,
                 kind: .continueStyle(titleLine: section.titleLine, detailLines: section.detailLine)
             )]
@@ -208,7 +219,7 @@ struct HomeTabView: View {
         case .resume(let section):
             let items = await fetchResume(client: client, limit: section.limit ?? 20)
             return [HomeRow(
-                title: section.title ?? "Resume",
+                title: section.title.orDefault("Resume"),
                 items: items,
                 kind: .continueStyle(titleLine: section.titleLine, detailLines: section.detailLine)
             )]
@@ -229,7 +240,12 @@ struct HomeTabView: View {
         case .libraries(let section):
             let items = await fetchLibraries(client: client)
             guard !items.isEmpty else { return [] }
-            return [HomeRow(title: section.title ?? "Libraries", items: items, kind: .library)]
+            return [HomeRow(title: section.title.orDefault("Libraries"), items: items, kind: .library)]
+
+        case .genres(let section):
+            let genres = await fetchGenres(client: client, limit: section.limit ?? 20)
+            guard !genres.isEmpty else { return [] }
+            return [HomeRow(title: section.title.orDefault("Genres"), items: [], kind: .genres(genres))]
 
         case .mediaBar, .unsupported:
             return []
@@ -237,6 +253,61 @@ struct HomeTabView: View {
     }
 
     // MARK: - Fetching
+
+    private static let genreItemTypes: [BaseItemKind] = [.movie, .series]
+
+    private func fetchGenres(client: JellyfinClient, limit: Int) async -> [GenreEntry] {
+        guard let userID = appState.currentUser?.id else { return [] }
+
+        let genres: [BaseItemDto]
+        do {
+            genres = try await client.send(Paths.getGenres(parameters: .init(
+                limit: limit,
+                includeItemTypes: Self.genreItemTypes,
+                userID: userID,
+                sortBy: [.sortName],
+                sortOrder: [.ascending]
+            ))).value.items ?? []
+        } catch {
+            return []
+        }
+
+        let entries = await withTaskGroup(of: GenreEntry?.self) { group in
+            for genre in genres {
+                guard let id = genre.id, let name = genre.name else { continue }
+                group.addTask {
+                    let result = try? await client.send(Paths.getItems(parameters: .init(
+                        userID: userID,
+                        limit: 1,
+                        isRecursive: true,
+                        excludeItemTypes: [.collectionFolder],
+                        includeItemTypes: Self.genreItemTypes,
+                        sortBy: [.random],
+                        genreIDs: [id]
+                    ))).value
+                    let item = result?.items?.first
+                    return GenreEntry(
+                        id: id,
+                        name: name,
+                        artwork: item.flatMap(GenreArtwork.init),
+                        totalItems: result?.totalRecordCount ?? 0
+                    )
+                }
+            }
+
+            var entries: [GenreEntry] = []
+            for await entry in group {
+                if let entry { entries.append(entry) }
+            }
+            return entries
+        }
+
+        return entries
+            .filter { $0.totalItems > 0 }
+            .sorted { lhs, rhs in
+                lhs.totalItems != rhs.totalItems ? lhs.totalItems > rhs.totalItems : lhs.name < rhs.name
+            }
+    }
 
     private static let supportedLibraryCollectionTypes: Set<CollectionType> = [.movies, .tvshows, .boxsets]
 
@@ -415,7 +486,7 @@ struct HomeTabView: View {
 
     nonisolated private static func skeletonKind(for section: HomeScreenSection) -> HomeSlot.SkeletonKind {
         switch section {
-        case .continueWatching, .nextUp, .resume, .libraries:
+        case .continueWatching, .nextUp, .resume, .libraries, .genres:
             return .landscape
         case .items(let section):
             return section.useThumbImage == true ? .landscape : .poster
@@ -427,15 +498,17 @@ struct HomeTabView: View {
     nonisolated private static func placeholderTitle(for section: HomeScreenSection) -> String? {
         switch section {
         case .continueWatching(let section):
-            return section.title ?? "Continue Watching"
+            return section.title.orDefault("Continue Watching")
         case .nextUp(let section):
-            return section.title ?? "Next Up"
+            return section.title.orDefault("Next Up")
         case .resume(let section):
-            return section.title ?? "Resume"
+            return section.title.orDefault("Resume")
         case .items(let section):
             return section.title ?? ""
         case .libraries(let section):
-            return section.title ?? "Libraries"
+            return section.title.orDefault("Libraries")
+        case .genres(let section):
+            return section.title.orDefault("Genres")
         case .recentlyAdded, .mediaBar, .unsupported:
             return nil
         }
@@ -545,10 +618,19 @@ struct HomeTabView: View {
     }
 }
 
+private extension Optional where Wrapped == String {
+    /// Falls back to `fallback` when the title is missing or empty, since configs may send `""`.
+    nonisolated func orDefault(_ fallback: String) -> String {
+        guard let self, !self.isEmpty else { return fallback }
+        return self
+    }
+}
+
 private enum HomeRowKind {
     case poster(detailText: (BaseItemDto) -> String, useThumb: Bool)
     case continueStyle(titleLine: ContinueWatchingTitleLine?, detailLines: [ContinueWatchingDetailLine]?)
     case library
+    case genres([GenreEntry])
 }
 
 private struct HomeRow: Identifiable {
@@ -556,6 +638,11 @@ private struct HomeRow: Identifiable {
     let title: String
     let items: [BaseItemDto]
     let kind: HomeRowKind
+
+    var isEmpty: Bool {
+        if case .genres(let genres) = kind { return genres.isEmpty }
+        return items.isEmpty
+    }
 }
 
 private struct HomeSlot: Identifiable {
