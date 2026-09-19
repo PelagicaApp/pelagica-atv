@@ -94,12 +94,42 @@ final class AppState: ObservableObject {
         let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw ConnectionError.invalidAddress }
         
-        let normalized = trimmed.contains("://") ? trimmed : "https://\(trimmed)"
-        guard let url = URL(string: normalized), url.host != nil else {
+        if trimmed.contains("://") {
+            guard let url = URL(string: trimmed), url.host != nil else {
+                throw ConnectionError.invalidAddress
+            }
+            return try await fetchServerInfo(url: url)
+        }
+        
+        guard let httpsURL = URL(string: "https://\(trimmed)"), httpsURL.host != nil,
+              let httpURL = URL(string: "http://\(trimmed)") else {
             throw ConnectionError.invalidAddress
         }
         
-        return try await fetchServerInfo(url: url)
+        return try await withThrowingTaskGroup(of: DiscoveredServer.self) { group in
+            for url in [httpsURL, httpURL] {
+                group.addTask {
+                    do {
+                        return try await self.fetchServerInfo(url: url)
+                    } catch {
+                        print("Pelagica connect: \(url.absoluteString) failed: \(error)")
+                        throw error
+                    }
+                }
+            }
+            
+            var lastError: Error = ConnectionError.invalidAddress
+            while true {
+                do {
+                    guard let server = try await group.next() else { throw lastError }
+                    group.cancelAll()
+                    return server
+                } catch {
+                    lastError = error
+                    if group.isEmpty { throw error }
+                }
+            }
+        }
     }
     
     func fetchServerInfo(url: URL) async throws -> DiscoveredServer {

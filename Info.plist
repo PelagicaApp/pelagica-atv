@@ -2,15 +2,20 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>CFBundleIcons</key>
 	<dict>
-		<key>CFBundlePrimaryIcon</key>
-		<string>App Icon</string>
 		<key>CFBundleAlternateIcons</key>
 		<array>
 			<string>AppIconPride</string>
 			<string>AppIconDefault</string>
 		</array>
+		<key>CFBundlePrimaryIcon</key>
+		<string>App Icon</string>
 	</dict>
 </dict>
 </plist>
