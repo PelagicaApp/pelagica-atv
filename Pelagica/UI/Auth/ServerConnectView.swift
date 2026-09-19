@@ -38,6 +38,15 @@ struct ServerConnectView: View {
                         .foregroundStyle(.red)
                         .font(.callout)
                 }
+
+                if !appState.profiles.isEmpty {
+                    Button {
+                        appState.cancelAddingProfile()
+                    } label: {
+                        Text("Back to profiles")
+                    }
+                    .buttonStyle(PelagicaButtonStyle(emphasis: .plain))
+                }
             }
             .frame(maxWidth: 700)
 

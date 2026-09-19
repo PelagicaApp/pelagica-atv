@@ -6,13 +6,12 @@
 import Foundation
 import Security
 
-/// Stores Jellyfin access tokens in the Keychain, keyed by server URL.
+/// Stores Jellyfin access tokens in the Keychain, keyed by an account string (a profile ID).
 struct KeychainStore {
     private let service = "app.pelagica.atv.Pelagica.accessToken"
 
-    func saveToken(_ token: String, forServer url: URL) {
-        let account = url.absoluteString
-        deleteToken(forServer: url)
+    func saveToken(_ token: String, forAccount account: String) {
+        deleteToken(forAccount: account)
 
         let attributes: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -23,11 +22,11 @@ struct KeychainStore {
         SecItemAdd(attributes as CFDictionary, nil)
     }
 
-    func readToken(forServer url: URL) -> String? {
+    func readToken(forAccount account: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: url.absoluteString,
+            kSecAttrAccount as String: account,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
@@ -38,11 +37,11 @@ struct KeychainStore {
         return String(data: data, encoding: .utf8)
     }
 
-    func deleteToken(forServer url: URL) {
+    func deleteToken(forAccount account: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: url.absoluteString,
+            kSecAttrAccount as String: account,
         ]
         SecItemDelete(query as CFDictionary)
     }

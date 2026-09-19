@@ -6,7 +6,15 @@
 import SwiftUI
 
 struct AuthFlowView: View {
-    @State private var path = NavigationPath()
+    @State private var path: NavigationPath
+
+    init(initialServer: DiscoveredServer? = nil) {
+        var initialPath = NavigationPath()
+        if let initialServer {
+            initialPath.append(AuthRoute.loginMethod(initialServer))
+        }
+        _path = State(initialValue: initialPath)
+    }
 
     var body: some View {
         NavigationStack(path: $path) {

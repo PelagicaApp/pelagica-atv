@@ -79,6 +79,14 @@ struct SettingsView: View {
             Spacer()
             
             Button {
+                appState.switchProfile()
+            } label: {
+                Text("Switch Profile")
+            }
+            .buttonStyle(PelagicaButtonStyle(emphasis: .secondary))
+            .frame(maxWidth: 320)
+            
+            Button {
                 appState.signOut()
             } label: {
                 Text("Sign Out")

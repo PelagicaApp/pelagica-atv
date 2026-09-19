@@ -114,6 +114,29 @@ struct PelagicaButtonStyle: ButtonStyle {
     }
 }
 
+struct PelagicaCircleButtonStyle: ButtonStyle {
+    var diameter: CGFloat
+
+    func makeBody(configuration: Configuration) -> some View {
+        PelagicaCircleButtonBody(configuration: configuration, diameter: diameter)
+    }
+
+    private struct PelagicaCircleButtonBody: View {
+        let configuration: ButtonStyleConfiguration
+        let diameter: CGFloat
+        @Environment(\.isFocused) private var isFocused
+
+        var body: some View {
+            configuration.label
+                .frame(width: diameter, height: diameter)
+                .clipShape(Circle())
+                .pelagicaFocusRing(isFocused: isFocused, cornerRadius: diameter / 2)
+                .scaleEffect(configuration.isPressed ? 0.97 : (isFocused ? 1.03 : 1))
+                .animation(.easeOut(duration: 0.14), value: isFocused)
+        }
+    }
+}
+
 struct PelagicaField: View {
     var placeholder: String
     @Binding var text: String

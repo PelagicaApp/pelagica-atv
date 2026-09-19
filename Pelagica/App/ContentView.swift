@@ -14,8 +14,10 @@ struct ContentView: View {
                 PageLoadingView(text: "Restoring session...")
             } else if appState.isLoggedIn {
                 MainView()
+            } else if appState.showsProfilePicker {
+                ProfileSelectView()
             } else {
-                AuthFlowView()
+                AuthFlowView(initialServer: appState.reauthServer)
             }
         }
         .environmentObject(appState)
