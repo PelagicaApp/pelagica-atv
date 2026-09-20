@@ -178,25 +178,35 @@ struct HomeTabView: View {
         slots = sections.map { HomeSlot(skeletonKind: Self.skeletonKind(for: $0), title: Self.placeholderTitle(for: $0)) }
         isLoadingConfig = false
 
-        async let mediaBarFetch: [BaseItemDto] = {
-            guard let mediaBarSection else { return [] }
-            return await self.fetchItems(config: mediaBarSection.items, client: client, fallbackLimit: 10)
-        }()
+        enum LoadResult {
+            case rows(index: Int, [HomeRow])
+            case mediaBar([BaseItemDto])
+        }
 
-        await withTaskGroup(of: (Int, [HomeRow]).self) { group in
-            for (index, section) in sections.enumerated() {
+        await withTaskGroup(of: LoadResult.self) { group in
+            if let mediaBarSection {
                 group.addTask {
-                    (index, await self.fetchRows(for: section, client: client))
+                    .mediaBar(await self.fetchItems(config: mediaBarSection.items, client: client, fallbackLimit: 10))
                 }
             }
 
-            for await (index, rows) in group {
-                slots[index] = HomeSlot(rows: rows, isLoading: false)
+            for (index, section) in sections.enumerated() {
+                group.addTask {
+                    .rows(index: index, await self.fetchRows(for: section, client: client))
+                }
+            }
+
+            for await result in group {
+                switch result {
+                case .rows(let index, let rows):
+                    slots[index] = HomeSlot(rows: rows, isLoading: false)
+                case .mediaBar(let items):
+                    mediaBarItems = items
+                    // Empty result doesn't leave media bar loading forever
+                    if items.isEmpty { hasMediaBarSection = false }
+                }
             }
         }
-
-        mediaBarItems = await mediaBarFetch
-        if mediaBarItems.isEmpty { hasMediaBarSection = false }
     }
 
     private func fetchRows(for section: HomeScreenSection, client: JellyfinClient) async -> [HomeRow] {
