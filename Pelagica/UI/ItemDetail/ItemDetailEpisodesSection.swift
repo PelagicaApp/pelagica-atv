@@ -142,6 +142,8 @@ private struct EpisodeCard: View {
         return number + (episode.name ?? "Untitled")
     }
 
+    private var thumbnailHeight: CGFloat { cardWidth * 9.0 / 16.0 }
+
     private var thumbnail: some View {
         ZStack(alignment: .topTrailing) {
             Color.white.opacity(0.06)
@@ -153,7 +155,10 @@ private struct EpisodeCard: View {
                     fallbackIcon
                         .opacity(isFailure(phase) ? 1 : 0)
                     if let image = phase.image {
-                        image.resizable().scaledToFill()
+                        Color.clear.overlay {
+                            image.resizable().scaledToFill()
+                        }
+                        .clipped()
                     }
                 }
             }
@@ -175,7 +180,7 @@ private struct EpisodeCard: View {
                 }
             }
         }
-        .aspectRatio(16.0 / 9.0, contentMode: .fit)
+        .frame(width: cardWidth, height: thumbnailHeight)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
         .contentShape(RoundedRectangle(cornerRadius: cornerRadius))
     }
