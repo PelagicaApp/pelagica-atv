@@ -196,6 +196,7 @@ struct HomeTabView: View {
         }
 
         mediaBarItems = await mediaBarFetch
+        if mediaBarItems.isEmpty { hasMediaBarSection = false }
     }
 
     private func fetchRows(for section: HomeScreenSection, client: JellyfinClient) async -> [HomeRow] {
@@ -334,7 +335,7 @@ struct HomeTabView: View {
             let result = try await client.send(Paths.getItems(parameters: .init(
                 userID: userID,
                 locationTypes: [.fileSystem],
-                limit: config?.limit ?? fallbackLimit,
+                limit: config?.limit.flatMap { $0 > 0 ? $0 : nil } ?? fallbackLimit,
                 isRecursive: true,
                 sortOrder: [config?.sortOrder ?? .descending],
                 parentID: config?.libraryID,
