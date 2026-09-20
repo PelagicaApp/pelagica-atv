@@ -202,7 +202,7 @@ struct HomeTabView: View {
     private func fetchRows(for section: HomeScreenSection, client: JellyfinClient) async -> [HomeRow] {
         switch section {
         case .continueWatching(let section):
-            let items = await fetchContinueWatching(client: client, limit: section.limit ?? 20)
+            let items = await fetchContinueWatching(client: client, limit: section.limit.orDefaultLimit(20))
             return [HomeRow(
                 title: section.title.orDefault("Continue Watching"),
                 items: items,
@@ -210,7 +210,7 @@ struct HomeTabView: View {
             )]
 
         case .nextUp(let section):
-            let items = await fetchNextUp(client: client, limit: section.limit ?? 20)
+            let items = await fetchNextUp(client: client, limit: section.limit.orDefaultLimit(20))
             return [HomeRow(
                 title: section.title.orDefault("Next Up"),
                 items: items,
@@ -218,7 +218,7 @@ struct HomeTabView: View {
             )]
             
         case .resume(let section):
-            let items = await fetchResume(client: client, limit: section.limit ?? 20)
+            let items = await fetchResume(client: client, limit: section.limit.orDefaultLimit(20))
             return [HomeRow(
                 title: section.title.orDefault("Resume"),
                 items: items,
@@ -244,7 +244,7 @@ struct HomeTabView: View {
             return [HomeRow(title: section.title.orDefault("Libraries"), items: items, kind: .library)]
 
         case .genres(let section):
-            let genres = await fetchGenres(client: client, limit: section.limit ?? 20)
+            let genres = await fetchGenres(client: client, limit: section.limit.orDefaultLimit(20))
             guard !genres.isEmpty else { return [] }
             return [HomeRow(title: section.title.orDefault("Genres"), items: [], kind: .genres(genres))]
 
@@ -335,7 +335,7 @@ struct HomeTabView: View {
             let result = try await client.send(Paths.getItems(parameters: .init(
                 userID: userID,
                 locationTypes: [.fileSystem],
-                limit: config?.limit.flatMap { $0 > 0 ? $0 : nil } ?? fallbackLimit,
+                limit: config?.limit.orDefaultLimit(fallbackLimit) ?? fallbackLimit,
                 isRecursive: true,
                 sortOrder: [config?.sortOrder ?? .descending],
                 parentID: config?.libraryID,
@@ -460,7 +460,7 @@ struct HomeTabView: View {
                     do {
                         let result = try await client.send(Paths.getItems(parameters: .init(
                             userID: userID,
-                            limit: section.limit ?? 10,
+                            limit: section.limit.orDefaultLimit(10),
                             isRecursive: true,
                             sortOrder: [.descending],
                             parentID: libraryID,
@@ -616,6 +616,14 @@ struct HomeTabView: View {
 
     nonisolated private static func recencyDate(for item: BaseItemDto) -> Date {
         item.userData?.lastPlayedDate ?? item.dateCreated ?? .distantPast
+    }
+}
+
+private extension Optional where Wrapped == Int {
+    /// Falls back to `fallback` when the limit is missing or not positive, since configs may send `0`.
+    nonisolated func orDefaultLimit(_ fallback: Int) -> Int {
+        guard let self, self > 0 else { return fallback }
+        return self
     }
 }
 
