@@ -78,7 +78,7 @@ struct HomeMediaBar: View {
     private var scrim: some View {
         ZStack {
             LinearGradient(
-                colors: [.black.opacity(0.95), .black.opacity(0.6), .clear],
+                colors: [.black, .black.opacity(0.6), .clear],
                 startPoint: .bottom,
                 endPoint: .top
             )
