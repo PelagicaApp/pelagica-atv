@@ -109,6 +109,7 @@ struct ItemDetailView: View {
             isWatchlist: isWatchlist,
             isTogglingWatchlist: isTogglingWatchlist,
             trailerAvailable: localTrailer != nil || trailerURL != nil,
+            canPlay: (item.type == .series ? nextEpisode : item).map(LibraryPolicy.canPlayVideo) ?? false,
             playLabel: playLabel,
             namespace: heroNamespace,
             isPlayButtonFocused: $isPlayButtonFocused,
@@ -147,7 +148,7 @@ struct ItemDetailView: View {
     }
 
     private func startPlayback(for target: BaseItemDto) {
-        guard target.id != nil else { return }
+        guard target.id != nil, LibraryPolicy.canPlayVideo(target) else { return }
         let startTicks = target.userData?.playbackPositionTicks ?? 0
         playbackTarget = PlaybackTarget(item: target, startTicks: startTicks)
     }
@@ -189,7 +190,7 @@ struct ItemDetailView: View {
         guard let client = appState.client, let id = item.id, (item.localTrailerCount ?? 0) > 0 else { return }
         do {
             let trailers = try await client.sendItems(Paths.getLocalTrailers(itemID: id, userID: appState.currentUser?.id)).value
-            localTrailer = trailers.first
+            localTrailer = trailers.first(where: LibraryPolicy.canPlayVideo)
         } catch {
             localTrailer = nil
         }

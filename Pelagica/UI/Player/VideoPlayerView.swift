@@ -211,7 +211,7 @@ struct VideoPlayerView: View {
     )
 
     private func resolvePlayback(atTicks ticks: Int, audioStreamIndex: Int? = nil, mediaSourceID: String? = nil) async {
-        guard let client = appState.client, let itemID = currentItem.id else {
+        guard LibraryPolicy.canPlayVideo(currentItem), let client = appState.client, let itemID = currentItem.id else {
             didFailToResolve = true
             return
         }

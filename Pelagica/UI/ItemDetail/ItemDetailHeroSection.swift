@@ -14,6 +14,7 @@ struct ItemDetailHeroSection: View {
     let isWatchlist: Bool
     let isTogglingWatchlist: Bool
     let trailerAvailable: Bool
+    let canPlay: Bool
     let playLabel: String
     let namespace: Namespace.ID
     var isPlayButtonFocused: FocusState<Bool>.Binding
@@ -182,12 +183,14 @@ struct ItemDetailHeroSection: View {
 
     private var buttonsRow: some View {
         HStack(spacing: 20) {
-            Button(action: onPlay) {
-                Label(playLabel, systemImage: "play.fill")
+            if canPlay {
+                Button(action: onPlay) {
+                    Label(playLabel, systemImage: "play.fill")
+                }
+                .buttonStyle(DetailActionButtonStyle(emphasis: .primary))
+                .prefersDefaultFocus(true, in: namespace)
+                .focused(isPlayButtonFocused)
             }
-            .buttonStyle(DetailActionButtonStyle(emphasis: .primary))
-            .prefersDefaultFocus(true, in: namespace)
-            .focused(isPlayButtonFocused)
 
             if trailerAvailable {
                 Button(action: onPlayTrailer) {
