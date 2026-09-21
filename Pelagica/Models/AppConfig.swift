@@ -185,6 +185,7 @@ extension AppConfig {
             showFavoriteButton: true,
             showWatchlistButton: true
         )),
+        .libraries(LibrariesSection(title: "Libraries")),
         .continueWatching(ContinueWatchingSection(
             title: "Continue Watching",
             titleLine: .itemTitleWithEpisodeInfo,

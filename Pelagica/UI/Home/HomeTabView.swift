@@ -79,7 +79,7 @@ struct HomeTabView: View {
             }
             .ignoresSafeArea(edges: hasMediaBarSection ? [.top, .horizontal] : [])
             .navigationDestination(for: ItemDetailRoute.self) { route in
-                ItemDetailView(item: route.item)
+                ItemDestinationView(item: route.item)
             }
             .navigationDestination(for: GenreRoute.self) { route in
                 LibraryItemsView(genre: route)
@@ -320,15 +320,11 @@ struct HomeTabView: View {
             }
     }
 
-    private static let supportedLibraryCollectionTypes: Set<CollectionType> = [.movies, .tvshows, .boxsets]
-
     private func fetchLibraries(client: JellyfinClient) async -> [BaseItemDto] {
         guard let userID = appState.currentUser?.id else { return [] }
         do {
             let result = try await client.sendItems(Paths.getUserViews(parameters: .init(userID: userID))).value
-            return (result.items ?? []).filter { view in
-                view.collectionType.map(Self.supportedLibraryCollectionTypes.contains) ?? false
-            }
+            return (result.items ?? []).filter(LibraryPolicy.isLibrary)
         } catch {
             return []
         }
@@ -344,13 +340,12 @@ struct HomeTabView: View {
         do {
             let result = try await client.sendItems(Paths.getItems(parameters: .init(
                 userID: userID,
-                locationTypes: [.fileSystem],
                 limit: config?.limit.orDefaultLimit(fallbackLimit) ?? fallbackLimit,
                 isRecursive: true,
                 sortOrder: [config?.sortOrder ?? .descending],
                 parentID: config?.libraryID,
                 fields: [.overview, .genres],
-                includeItemTypes: (config?.types?.isEmpty == false) ? config?.types : [.movie, .series],
+                includeItemTypes: (config?.types?.isEmpty == false) ? config?.types : (config?.libraryID == nil ? [.movie, .series] : nil),
                 filters: filters,
                 isFavorite: config?.isFavorite,
                 sortBy: config?.sortBy ?? [.random],
@@ -444,14 +439,8 @@ struct HomeTabView: View {
             return []
         }
 
-        let supportedTypes: [CollectionType: [BaseItemKind]] = [
-            .movies: [.movie],
-            .tvshows: [.series],
-            .boxsets: [.boxSet],
-        ]
-
         let libraries = views.filter { view in
-            guard let collectionType = view.collectionType, supportedTypes[collectionType] != nil else { return false }
+            guard LibraryPolicy.isLibrary(view) else { return false }
             if let libraryIDs = section.libraryIDs, !libraryIDs.isEmpty {
                 return view.id.map(libraryIDs.contains) ?? false
             }
@@ -461,26 +450,35 @@ struct HomeTabView: View {
         return await withTaskGroup(of: (Int, HomeRow?).self) { group in
             for (index, library) in libraries.enumerated() {
                 group.addTask {
-                    guard
-                        let libraryID = library.id,
-                        let name = library.name,
-                        let collectionType = library.collectionType
-                    else { return (index, nil) }
+                    guard let libraryID = library.id else { return (index, nil) }
+                    let name = library.name ?? "Library"
 
                     do {
-                        let result = try await client.sendItems(Paths.getItems(parameters: .init(
-                            userID: userID,
-                            limit: section.limit.orDefaultLimit(10),
-                            isRecursive: true,
-                            sortOrder: [.descending],
-                            parentID: libraryID,
-                            fields: [.overview],
-                            includeItemTypes: supportedTypes[collectionType],
-                            sortBy: [.dateCreated],
-                            enableUserData: true
-                        ))).value
+                        let result: BaseItemDtoQueryResult
+                        if library.collectionType == .livetv {
+                            result = try await client.sendItems(Paths.getLiveTvChannels(parameters: .init(
+                                userID: userID,
+                                limit: section.limit.orDefaultLimit(10),
+                                fields: [.overview],
+                                enableUserData: true,
+                                sortBy: [.dateCreated],
+                                sortOrder: .descending
+                            ))).value
+                        } else {
+                            result = try await client.sendItems(Paths.getItems(parameters: .init(
+                                userID: userID,
+                                limit: section.limit.orDefaultLimit(10),
+                                isRecursive: true,
+                                sortOrder: [.descending],
+                                parentID: libraryID,
+                                fields: [.overview],
+                                includeItemTypes: LibraryPolicy.recentItemTypes(for: library.collectionType),
+                                sortBy: [.dateCreated],
+                                enableUserData: true
+                            ))).value
+                        }
                         guard let items = result.items, !items.isEmpty else { return (index, nil) }
-                        return (index, HomeRow(title: "Recently Added in \(name)", items: items, kind: .poster(detailText: Self.defaultDetailText, useThumb: false)))
+                        return (index, HomeRow(title: "\(section.title.orDefault("Recently Added")) in \(name)", items: items, kind: .poster(detailText: Self.defaultDetailText, useThumb: false)))
                     } catch {
                         return (index, nil)
                     }

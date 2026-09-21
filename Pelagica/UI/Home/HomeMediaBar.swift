@@ -182,8 +182,12 @@ struct HomeMediaBar: View {
 
     private var buttonsRow: some View {
         HStack(spacing: 20) {
+            let canPlay = currentItem.map { LibraryPolicy.canPlayVideo($0) || $0.type == .series } == true
             NavigationLink(value: currentItem.map { ItemDetailRoute(item: $0) }) {
-                Label("Watch now", systemImage: "play.fill")
+                Label(
+                    canPlay ? "Watch now" : "View details",
+                    systemImage: canPlay ? "play.fill" : "info.circle"
+                )
             }
             .buttonStyle(DetailActionButtonStyle(emphasis: .primary))
             .prefersDefaultFocus(true, in: namespace)

@@ -15,6 +15,7 @@ struct HomeLibraryCard: View {
     private let aspectRatio: CGFloat = 16.0 / 9.0
 
     var body: some View {
+        let imageURL = self.imageURL
         VStack(alignment: .leading, spacing: 16) {
             Button {
                 navigationCoordinator.openLibrary(library)
@@ -25,9 +26,9 @@ struct HomeLibraryCard: View {
                     AsyncImage(url: imageURL) { phase in
                         ZStack {
                             SkeletonView()
-                                .opacity(phase.image == nil && !isFailure(phase) ? 1 : 0)
+                                .opacity(imageURL != nil && phase.image == nil && !isFailure(phase) ? 1 : 0)
                             fallbackIcon
-                                .opacity(isFailure(phase) ? 1 : 0)
+                                .opacity(imageURL == nil || isFailure(phase) ? 1 : 0)
                             if let image = phase.image {
                                 image.resizable().scaledToFill()
                             }
@@ -49,7 +50,7 @@ struct HomeLibraryCard: View {
     }
 
     private var fallbackIcon: some View {
-        Image(systemName: "books.vertical")
+        Image(systemName: "folder")
             .font(.system(size: 32))
             .foregroundStyle(.white.opacity(0.3))
     }
