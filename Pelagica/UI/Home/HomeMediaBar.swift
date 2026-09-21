@@ -276,7 +276,7 @@ struct HomeMediaBar: View {
         nextEpisode = nil
         guard let client = appState.client, currentItem?.type == .series, let seriesID = currentItem?.id else { return }
         do {
-            let nextUp = try await client.send(Paths.getNextUp(parameters: .init(
+            let nextUp = try await client.sendItems(Paths.getNextUp(parameters: .init(
                 userID: appState.currentUser?.id,
                 limit: 1,
                 seriesID: seriesID
@@ -286,7 +286,7 @@ struct HomeMediaBar: View {
                 return
             }
 
-            let episodes = try await client.send(Paths.getEpisodes(seriesID: seriesID, parameters: .init(
+            let episodes = try await client.sendItems(Paths.getEpisodes(seriesID: seriesID, parameters: .init(
                 userID: appState.currentUser?.id,
                 limit: 1
             ))).value

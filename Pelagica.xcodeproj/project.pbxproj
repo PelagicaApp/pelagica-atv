@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		3D72E953304D968900733911 /* JellyfinAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 3D72E952304D968900733911 /* JellyfinAPI */; };
 		3DDCF42E3057026D00AD144C /* SwiftAssRenderer in Frameworks */ = {isa = PBXBuildFile; productRef = ADEC04E562074E819CB77DCD /* SwiftAssRenderer */; };
+		B7021F4C303A4D500000000C /* Get in Frameworks */ = {isa = PBXBuildFile; productRef = B7021F4C303A4D500000000D /* Get */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +31,7 @@
 			files = (
 				3DDCF42E3057026D00AD144C /* SwiftAssRenderer in Frameworks */,
 				3D72E953304D968900733911 /* JellyfinAPI in Frameworks */,
+				B7021F4C303A4D500000000C /* Get in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -74,6 +76,7 @@
 			packageProductDependencies = (
 				3D72E952304D968900733911 /* JellyfinAPI */,
 				ADEC04E562074E819CB77DCD /* SwiftAssRenderer */,
+				B7021F4C303A4D500000000D /* Get */,
 			);
 			productName = Pelagica;
 			productReference = 3D72E93D304D940200733911 /* Pelagica.app */;
@@ -106,6 +109,7 @@
 			packageReferences = (
 				3D72E951304D968900733911 /* XCRemoteSwiftPackageReference "jellyfin-sdk-swift" */,
 				A12597F316C009C158E869A1 /* XCRemoteSwiftPackageReference "swift-ass-renderer" */,
+				B7021F4C303A4D500000000E /* XCRemoteSwiftPackageReference "Get" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3D72E93E304D940200733911 /* Products */;
@@ -365,6 +369,14 @@
 				minimumVersion = 1.3.1;
 			};
 		};
+		B7021F4C303A4D500000000E /* XCRemoteSwiftPackageReference "Get" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kean/Get";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.2.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -377,6 +389,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A12597F316C009C158E869A1 /* XCRemoteSwiftPackageReference "swift-ass-renderer" */;
 			productName = SwiftAssRenderer;
+		};
+		B7021F4C303A4D500000000D /* Get */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B7021F4C303A4D500000000E /* XCRemoteSwiftPackageReference "Get" */;
+			productName = Get;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

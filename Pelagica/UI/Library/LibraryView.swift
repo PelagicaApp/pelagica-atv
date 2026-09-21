@@ -63,7 +63,7 @@ struct LibraryView: View {
     private func loadLibraries() async {
         guard let client = appState.client else { return }
         do {
-            let result = try await client.send(Paths.getUserViews()).value
+            let result = try await client.sendItems(Paths.getUserViews()).value
             if (result.items != nil && result.items?.isEmpty == false) {
                 libraries = result.items?.filter {
                     $0.collectionType != nil && supportedLibraryTypes.contains($0.collectionType!)

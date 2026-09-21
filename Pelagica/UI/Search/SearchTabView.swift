@@ -97,7 +97,7 @@ struct SearchTabView: View {
     private func search() async {
         guard let client = appState.client else { return }
         do {
-            let result = try await client.send(Paths.getItems(parameters: .init(
+            let result = try await client.sendItems(Paths.getItems(parameters: .init(
                 userID: appState.currentUser?.id,
                 locationTypes: [LocationType.fileSystem],
                 limit: resultsCount,

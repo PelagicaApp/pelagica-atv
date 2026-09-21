@@ -179,7 +179,7 @@ struct LibraryItemsView: View {
             parameters.genreIDs = [id]
         }
         do {
-            let result = try await client.send(Paths.getItems(parameters: parameters)).value
+            let result = try await client.sendItems(Paths.getItems(parameters: parameters)).value
             guard requestedSortKey == sortKey else { return }
             items.append(contentsOf: result.items ?? [])
             totalCount = result.totalRecordCount ?? items.count

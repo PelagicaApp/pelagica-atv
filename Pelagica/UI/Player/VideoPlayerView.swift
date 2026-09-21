@@ -138,7 +138,7 @@ struct VideoPlayerView: View {
         else { return nil }
 
         do {
-            let result = try await client.send(Paths.getEpisodes(
+            let result = try await client.sendItems(Paths.getEpisodes(
                 seriesID: seriesID,
                 parameters: .init(userID: appState.currentUser?.id, fields: [.overview], adjacentTo: episodeID, enableUserData: true)
             )).value

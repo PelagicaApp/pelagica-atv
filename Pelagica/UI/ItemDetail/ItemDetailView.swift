@@ -177,7 +177,7 @@ struct ItemDetailView: View {
     private func loadFullItem() async {
         guard let client = appState.client, let id = item.id else { return }
         do {
-            let full = try await client.send(Paths.getItem(itemID: id, userID: appState.currentUser?.id)).value
+            let full = try await client.sendItems(Paths.getItem(itemID: id, userID: appState.currentUser?.id)).value
             item = full
             isWatchlist = full.userData?.isLikes ?? false
         } catch {
@@ -188,7 +188,7 @@ struct ItemDetailView: View {
     private func loadLocalTrailer() async {
         guard let client = appState.client, let id = item.id, (item.localTrailerCount ?? 0) > 0 else { return }
         do {
-            let trailers = try await client.send(Paths.getLocalTrailers(itemID: id, userID: appState.currentUser?.id)).value
+            let trailers = try await client.sendItems(Paths.getLocalTrailers(itemID: id, userID: appState.currentUser?.id)).value
             localTrailer = trailers.first
         } catch {
             localTrailer = nil
@@ -198,7 +198,7 @@ struct ItemDetailView: View {
     private func loadNextEpisode() async {
         guard let client = appState.client, let seriesID = item.id else { return }
         do {
-            let nextUp = try await client.send(Paths.getNextUp(parameters: .init(
+            let nextUp = try await client.sendItems(Paths.getNextUp(parameters: .init(
                 userID: appState.currentUser?.id,
                 limit: 1,
                 fields: [.overview],
@@ -209,7 +209,7 @@ struct ItemDetailView: View {
                 return
             }
 
-            let episodes = try await client.send(Paths.getEpisodes(seriesID: seriesID, parameters: .init(
+            let episodes = try await client.sendItems(Paths.getEpisodes(seriesID: seriesID, parameters: .init(
                 userID: appState.currentUser?.id,
                 fields: [.overview],
                 limit: 1
@@ -223,7 +223,7 @@ struct ItemDetailView: View {
     private func loadSeasons() async {
         guard let client = appState.client, let seriesID = item.id else { return }
         do {
-            let result = try await client.send(Paths.getSeasons(seriesID: seriesID, parameters: .init(
+            let result = try await client.sendItems(Paths.getSeasons(seriesID: seriesID, parameters: .init(
                 userID: appState.currentUser?.id
             ))).value
             seasons = result.items ?? []
@@ -236,7 +236,7 @@ struct ItemDetailView: View {
     private func loadEpisodes(seasonID: String) async {
         guard let client = appState.client, let seriesID = item.id else { return }
         do {
-            let result = try await client.send(Paths.getEpisodes(seriesID: seriesID, parameters: .init(
+            let result = try await client.sendItems(Paths.getEpisodes(seriesID: seriesID, parameters: .init(
                 userID: appState.currentUser?.id,
                 fields: [.overview],
                 seasonID: seasonID,
@@ -251,7 +251,7 @@ struct ItemDetailView: View {
     private func laodSimilarItems() async {
         guard let client = appState.client, let itemID = item.id else { return }
         do {
-            let result = try await client.send(Paths.getSimilarItems(itemID: itemID)).value
+            let result = try await client.sendItems(Paths.getSimilarItems(itemID: itemID)).value
             similarItems = result.items ?? []
         } catch {
             similarItems = []
@@ -262,11 +262,11 @@ struct ItemDetailView: View {
         guard let client = appState.client, let itemID = item.id else { return }
         let sort = configStore.config.itemPage?.collectionSort ?? .premiereDateAsc
         do {
-            let result = try await client.send(Paths.getItemCollections(itemID: itemID)).value
+            let result = try await client.sendItems(Paths.getItemCollections(itemID: itemID)).value
             guard let colls = result.items else { return }
             for coll in colls {
                 guard let collName = coll.name else { continue }
-                let result = try await client.send(Paths.getItems(parameters: .init(locationTypes: [LocationType.fileSystem], parentID: coll.id))).value
+                let result = try await client.sendItems(Paths.getItems(parameters: .init(locationTypes: [LocationType.fileSystem], parentID: coll.id))).value
                 guard let items = result.items else { continue }
                 if items.isEmpty { continue }
                 collectionItems[collName] = CollectionSorting.sort(items, by: sort)

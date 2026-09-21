@@ -272,7 +272,7 @@ struct HomeTabView: View {
 
         let genres: [BaseItemDto]
         do {
-            genres = try await client.send(Paths.getGenres(parameters: .init(
+            genres = try await client.sendItems(Paths.getGenres(parameters: .init(
                 limit: limit,
                 includeItemTypes: Self.genreItemTypes,
                 userID: userID,
@@ -287,7 +287,7 @@ struct HomeTabView: View {
             for genre in genres {
                 guard let id = genre.id, let name = genre.name else { continue }
                 group.addTask {
-                    let result = try? await client.send(Paths.getItems(parameters: .init(
+                    let result = try? await client.sendItems(Paths.getItems(parameters: .init(
                         userID: userID,
                         limit: 1,
                         isRecursive: true,
@@ -325,7 +325,7 @@ struct HomeTabView: View {
     private func fetchLibraries(client: JellyfinClient) async -> [BaseItemDto] {
         guard let userID = appState.currentUser?.id else { return [] }
         do {
-            let result = try await client.send(Paths.getUserViews(parameters: .init(userID: userID))).value
+            let result = try await client.sendItems(Paths.getUserViews(parameters: .init(userID: userID))).value
             return (result.items ?? []).filter { view in
                 view.collectionType.map(Self.supportedLibraryCollectionTypes.contains) ?? false
             }
@@ -342,7 +342,7 @@ struct HomeTabView: View {
         if config?.isInKefinTweaksWatchlist == true { filters.append(.likes) }
 
         do {
-            let result = try await client.send(Paths.getItems(parameters: .init(
+            let result = try await client.sendItems(Paths.getItems(parameters: .init(
                 userID: userID,
                 locationTypes: [.fileSystem],
                 limit: config?.limit.orDefaultLimit(fallbackLimit) ?? fallbackLimit,
@@ -368,7 +368,7 @@ struct HomeTabView: View {
         guard let userID = appState.currentUser?.id else { return [] }
         async let resume: [BaseItemDto] = {
             do {
-                let result = try await client.send(Paths.getResumeItems(parameters: .init(
+                let result = try await client.sendItems(Paths.getResumeItems(parameters: .init(
                     userID: userID,
                     limit: limit * 2,
                     fields: [.overview],
@@ -402,7 +402,7 @@ struct HomeTabView: View {
 
     private func fetchNextUpItems(client: JellyfinClient, userID: String, limit: Int, enableResumable: Bool?) async -> [BaseItemDto] {
         do {
-            let result = try await client.send(Paths.getNextUp(parameters: .init(
+            let result = try await client.sendItems(Paths.getNextUp(parameters: .init(
                 userID: userID,
                 limit: limit,
                 fields: [.overview],
@@ -422,7 +422,7 @@ struct HomeTabView: View {
     
     private func fetchResumeItems(client: JellyfinClient, userID: String, limit: Int) async -> [BaseItemDto] {
         do {
-            let result = try await client.send(Paths.getResumeItems(parameters: .init(
+            let result = try await client.sendItems(Paths.getResumeItems(parameters: .init(
                 userID: userID,
                 limit: limit,
                 fields: [.overview],
@@ -439,7 +439,7 @@ struct HomeTabView: View {
 
         let views: [BaseItemDto]
         do {
-            views = try await client.send(Paths.getUserViews(parameters: .init(userID: userID))).value.items ?? []
+            views = try await client.sendItems(Paths.getUserViews(parameters: .init(userID: userID))).value.items ?? []
         } catch {
             return []
         }
@@ -468,7 +468,7 @@ struct HomeTabView: View {
                     else { return (index, nil) }
 
                     do {
-                        let result = try await client.send(Paths.getItems(parameters: .init(
+                        let result = try await client.sendItems(Paths.getItems(parameters: .init(
                             userID: userID,
                             limit: section.limit.orDefaultLimit(10),
                             isRecursive: true,
