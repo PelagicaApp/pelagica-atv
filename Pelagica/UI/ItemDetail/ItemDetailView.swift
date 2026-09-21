@@ -266,8 +266,10 @@ struct ItemDetailView: View {
             let result = try await client.sendItems(Paths.getItemCollections(itemID: itemID)).value
             guard let colls = result.items else { return }
             for coll in colls {
-                guard let collName = coll.name else { continue }
-                let result = try await client.sendItems(Paths.getItems(parameters: .init(locationTypes: [LocationType.fileSystem], parentID: coll.id))).value
+                guard let collName = coll.name, let collectionID = coll.id else { continue }
+                let result = try await client.sendItems(Paths.getItems(parameters: .init(
+                    userID: appState.currentUser?.id, isRecursive: false, parentID: collectionID
+                ))).value
                 guard let items = result.items else { continue }
                 if items.isEmpty { continue }
                 collectionItems[collName] = CollectionSorting.sort(items, by: sort)

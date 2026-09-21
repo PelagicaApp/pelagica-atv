@@ -13,9 +13,8 @@ struct LibraryView: View {
 
     @State private var libraries: [BaseItemDto] = []
     @State private var errorMessage: String?
+    @State private var isLoading = true
     @State private var path = NavigationPath()
-
-    private let supportedLibraryTypes: [CollectionType] = [.movies, .tvshows]
 
     private let columns = [GridItem(.adaptive(minimum: 380), spacing: 60)]
 
@@ -30,8 +29,14 @@ struct LibraryView: View {
                             .font(.system(size: 40, weight: .bold))
                             .foregroundStyle(.white)
 
-                        if let errorMessage {
+                        if isLoading {
+                            ProgressView()
+                                .tint(.white)
+                        } else if let errorMessage {
                             Text(errorMessage)
+                                .foregroundStyle(.secondary)
+                        } else if libraries.isEmpty {
+                            Text("No libraries are available for this user.")
                                 .foregroundStyle(.secondary)
                         } else {
                             LazyVGrid(columns: columns, spacing: 60) {
@@ -48,7 +53,7 @@ struct LibraryView: View {
                 LibraryItemsView(library: library)
             }
             .navigationDestination(for: ItemDetailRoute.self) { route in
-                ItemDetailView(item: route.item)
+                ItemDestinationView(item: route.item)
             }
         }
         .onDisappear { path = NavigationPath() }
@@ -61,16 +66,17 @@ struct LibraryView: View {
     }
 
     private func loadLibraries() async {
-        guard let client = appState.client else { return }
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        guard let client = appState.client, let userID = appState.currentUser?.id else {
+            libraries = []
+            errorMessage = "Sign in to browse your libraries."
+            return
+        }
         do {
-            let result = try await client.sendItems(Paths.getUserViews()).value
-            if (result.items != nil && result.items?.isEmpty == false) {
-                libraries = result.items?.filter {
-                    $0.collectionType != nil && supportedLibraryTypes.contains($0.collectionType!)
-                } ?? []
-            } else {
-                libraries = []
-            }
+            let result = try await client.sendItems(Paths.getUserViews(parameters: .init(userID: userID))).value
+            libraries = (result.items ?? []).filter(LibraryPolicy.isLibrary)
         } catch {
             errorMessage = "Couldn't load your libraries."
         }
@@ -84,6 +90,7 @@ private struct LibraryCard: View {
     private let cornerRadius: CGFloat = 20
 
     var body: some View {
+        let imageURL = self.imageURL
         VStack(alignment: .leading, spacing: 20) {
             NavigationLink(value: library) {
                 ZStack {
@@ -92,9 +99,9 @@ private struct LibraryCard: View {
                     AsyncImage(url: imageURL) { phase in
                         ZStack {
                             SkeletonView()
-                                .opacity(phase.image == nil && !isFailure(phase) ? 1 : 0)
+                                .opacity(imageURL != nil && phase.image == nil && !isFailure(phase) ? 1 : 0)
                             fallbackIcon
-                                .opacity(isFailure(phase) ? 1 : 0)
+                                .opacity(imageURL == nil || isFailure(phase) ? 1 : 0)
                             if let image = phase.image {
                                 image.resizable().scaledToFill()
                             }
@@ -116,7 +123,7 @@ private struct LibraryCard: View {
     }
     
     private var fallbackIcon: some View {
-        Image(systemName: "books.vertical")
+        Image(systemName: "folder")
             .font(.system(size: 40))
             .foregroundStyle(.white.opacity(0.3))
     }
