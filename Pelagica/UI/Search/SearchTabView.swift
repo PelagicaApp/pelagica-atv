@@ -60,7 +60,7 @@ struct SearchTabView: View {
                 }
             }
             .navigationDestination(for: ItemDetailRoute.self) { route in
-                ItemDetailView(item: route.item)
+                ItemDestinationView(item: route.item)
             }
             .searchable(text: $query, prompt: "Search")
         }
@@ -70,8 +70,10 @@ struct SearchTabView: View {
             guard !Task.isCancelled else { return }
 
             results = []
+            errorMessage = nil
             isLoading = true
             await search()
+            guard !Task.isCancelled else { return }
             isLoading = false
         }
     }
@@ -99,17 +101,17 @@ struct SearchTabView: View {
         do {
             let result = try await client.sendItems(Paths.getItems(parameters: .init(
                 userID: appState.currentUser?.id,
-                locationTypes: [LocationType.fileSystem],
                 limit: resultsCount,
                 isRecursive: true,
                 searchTerm: query,
                 fields: [.overview, .parentID],
-                includeItemTypes: [.movie, .series],
                 enableUserData: true,
             ))).value
+            guard !Task.isCancelled else { return }
             results = result.items ?? []
         } catch is CancellationError {
         } catch {
+            guard !Task.isCancelled else { return }
             errorMessage = "Couldn't load items."
         }
     }
