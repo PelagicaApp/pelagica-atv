@@ -9,17 +9,34 @@
 /* Begin PBXBuildFile section */
 		3D72E953304D968900733911 /* JellyfinAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 3D72E952304D968900733911 /* JellyfinAPI */; };
 		3DDCF42E3057026D00AD144C /* SwiftAssRenderer in Frameworks */ = {isa = PBXBuildFile; productRef = ADEC04E562074E819CB77DCD /* SwiftAssRenderer */; };
+		B7021F4C303A4D5000000001 /* JellyfinAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 3D72E952304D968900733911 /* JellyfinAPI */; };
 		B7021F4C303A4D500000000C /* Get in Frameworks */ = {isa = PBXBuildFile; productRef = B7021F4C303A4D500000000D /* Get */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		B7021F4C303A4D5000000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3D72E935304D940200733911 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3D72E93C304D940200733911;
+			remoteInfo = Pelagica;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		3D72E93D304D940200733911 /* Pelagica.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pelagica.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B7021F4C303A4D5000000003 /* PelagicaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PelagicaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3D72E93F304D940200733911 /* Pelagica */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Pelagica;
+			sourceTree = "<group>";
+		};
+		B7021F4C303A4D5000000004 /* PelagicaTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PelagicaTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -35,6 +52,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B7021F4C303A4D5000000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B7021F4C303A4D5000000001 /* JellyfinAPI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -42,6 +67,7 @@
 			isa = PBXGroup;
 			children = (
 				3D72E93F304D940200733911 /* Pelagica */,
+				B7021F4C303A4D5000000004 /* PelagicaTests */,
 				3D72E93E304D940200733911 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -50,6 +76,7 @@
 			isa = PBXGroup;
 			children = (
 				3D72E93D304D940200733911 /* Pelagica.app */,
+				B7021F4C303A4D5000000003 /* PelagicaTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -82,6 +109,29 @@
 			productReference = 3D72E93D304D940200733911 /* Pelagica.app */;
 			productType = "com.apple.product-type.application";
 		};
+		B7021F4C303A4D5000000006 /* PelagicaTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B7021F4C303A4D5000000007 /* Build configuration list for PBXNativeTarget "PelagicaTests" */;
+			buildPhases = (
+				B7021F4C303A4D5000000008 /* Sources */,
+				B7021F4C303A4D5000000005 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B7021F4C303A4D5000000009 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B7021F4C303A4D5000000004 /* PelagicaTests */,
+			);
+			name = PelagicaTests;
+			packageProductDependencies = (
+				3D72E952304D968900733911 /* JellyfinAPI */,
+			);
+			productName = PelagicaTests;
+			productReference = B7021F4C303A4D5000000003 /* PelagicaTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -94,6 +144,10 @@
 				TargetAttributes = {
 					3D72E93C304D940200733911 = {
 						CreatedOnToolsVersion = 26.6;
+					};
+					B7021F4C303A4D5000000006 = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = 3D72E93C304D940200733911;
 					};
 				};
 			};
@@ -117,6 +171,7 @@
 			projectRoot = "";
 			targets = (
 				3D72E93C304D940200733911 /* Pelagica */,
+				B7021F4C303A4D5000000006 /* PelagicaTests */,
 			);
 		};
 /* End PBXProject section */
@@ -139,7 +194,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B7021F4C303A4D5000000008 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B7021F4C303A4D5000000009 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3D72E93C304D940200733911 /* Pelagica */;
+			targetProxy = B7021F4C303A4D5000000002 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		3D72E946304D940200733911 /* Debug */ = {
@@ -329,6 +399,34 @@
 			};
 			name = Release;
 		};
+		B7021F4C303A4D500000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = app.pelagica.atv.PelagicaTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Pelagica.app/Pelagica";
+			};
+			name = Debug;
+		};
+		B7021F4C303A4D500000000B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = app.pelagica.atv.PelagicaTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Pelagica.app/Pelagica";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -346,6 +444,15 @@
 			buildConfigurations = (
 				3D72E949304D940200733911 /* Debug */,
 				3D72E94A304D940200733911 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B7021F4C303A4D5000000007 /* Build configuration list for PBXNativeTarget "PelagicaTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B7021F4C303A4D500000000A /* Debug */,
+				B7021F4C303A4D500000000B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
