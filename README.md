@@ -27,6 +27,16 @@ This is the Apple TV app for [Pelagica](https://github.com/PelagicaApp/pelagica)
 
 > Screenshots may include media artwork used for demonstration purposes only.
 
+## Libraries and playback
+
+The library browser supports `unknown`, `movies`, `tvshows`, `mixed`, `music`, `musicvideos`, `trailers`, `homevideos`, `boxsets`, `books`, `photos`, `livetv`, `playlists`, and `folders`. Libraries without a `CollectionType` are also shown. The client handles `mixed` responses without modifying the generated Jellyfin SDK.
+
+- Browse nested folders, virtual collections, playlists, photo albums, artists, music albums, and seasons. Playlist order and repeated entries are preserved.
+- Open video items with the existing player; series keep their episode-oriented details.
+- View photos in their original aspect ratio, including full-screen viewing.
+- Books, audio, audiobooks, and live TV channels have metadata views instead of unsupported playback controls. This does not add a book reader, audio player, live TV playback engine, or download support.
+- The default home includes libraries. Server-configured home sections and library selections remain in control.
+
 ## Installation
 
 ### App Store
@@ -47,10 +57,23 @@ git clone https://github.com/PelagicaApp/pelagica-atv.git
 cd pelagica-atv
 ```
 
-3. Open `Pelagica.xcodeproj` in Xcode. Swift Package Manager will automatically resolve the [jellyfin-sdk-swift](https://github.com/jellyfin/jellyfin-sdk-swift) dependency on first build.
+3. Open `Pelagica.xcodeproj` in Xcode. Swift Package Manager will automatically resolve the project's dependencies, including [jellyfin-sdk-swift](https://github.com/jellyfin/jellyfin-sdk-swift), on first build.
 4. Select the `Pelagica` scheme and an Apple TV simulator or a physical Apple TV as the run destination.
 5. If deploying to a physical Apple TV, select your own team under the target's _Signing & Capabilities_ tab so Xcode can code-sign the build.
 6. Build and run (`Cmd+R`).
+
+### Tests
+
+The shared `Pelagica` scheme includes `PelagicaTests`, covering collection decoding, untyped libraries, container routing, and supported playback boundaries.
+
+```bash
+xcodebuild test \
+  -project Pelagica.xcodeproj \
+  -scheme Pelagica \
+  -destination 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation) (at 1080p)'
+```
+
+Choose an installed tvOS 26.5 or later simulator if its name differs.
 
 ## Discord
 
