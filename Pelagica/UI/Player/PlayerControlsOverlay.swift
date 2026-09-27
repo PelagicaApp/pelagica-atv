@@ -30,6 +30,7 @@ struct PlayerControlsOverlay: View {
     let selectedSubtitleIndex: Int?
     let introRange: ClosedRange<TimeInterval>?
     let outroRange: ClosedRange<TimeInterval>?
+    let trickplay: TrickplayProvider?
     let onSelectAudio: (MediaStream) -> Void
     let onSelectSubtitle: (MediaStream?) -> Void
     let onClose: () -> Void
@@ -59,9 +60,12 @@ struct PlayerControlsOverlay: View {
     @State private var hideGeneration = 0
     @State private var activeSkipSegment: ActiveSkipSegment?
     @State private var openPanel: TrackPanel?
+    @State private var scrubGeneration = 0
 
     private static let jumpSeconds: TimeInterval = 10
     private static let autoHideDelay: Duration = .seconds(5)
+    /// How long the scrub position rests before it's committed
+    private static let scrubCommitDelay: Duration = .seconds(0.8)
 
     var body: some View {
         ZStack {
@@ -114,11 +118,15 @@ struct PlayerControlsOverlay: View {
         .animation(.easeInOut(duration: 0.25), value: controlsVisible)
         .animation(.easeInOut(duration: 0.2), value: openPanel)
         .onPlayPauseCommand {
+            controller.commitScrub()
             controller.togglePlayPause()
             showControls()
         }
         .onExitCommand {
-            if let openPanel {
+            if controller.isScrubbing {
+                controller.cancelScrub()
+                showControls()
+            } else if let openPanel {
                 closePanel(openPanel)
             } else if controlsVisible {
                 hideControls()
@@ -149,8 +157,14 @@ struct PlayerControlsOverlay: View {
         .onChange(of: controller.isPlaying) { _, _ in scheduleAutoHide() }
         .task(id: hideGeneration) {
             try? await Task.sleep(for: Self.autoHideDelay)
-            guard !Task.isCancelled, controller.isPlaying, focusedField == .scrubber else { return }
+            guard !Task.isCancelled, controller.isPlaying, focusedField == .scrubber, !controller.isScrubbing else { return }
             controlsVisible = false
+        }
+        .task(id: scrubGeneration) {
+            guard controller.isScrubbing else { return }
+            try? await Task.sleep(for: Self.scrubCommitDelay)
+            guard !Task.isCancelled else { return }
+            controller.commitScrub()
         }
     }
 
@@ -198,20 +212,26 @@ struct PlayerControlsOverlay: View {
     private var transportBar: some View {
         VStack(alignment: .leading, spacing: 24) {
             Button {
-                if controlsVisible {
+                if controller.isScrubbing {
+                    controller.commitScrub()
+                } else if controlsVisible {
                     controller.togglePlayPause()
                 }
                 showControls()
             } label: {
-                ScrubberBar(clock: controller.clock, isPlaying: controller.isPlaying)
+                ScrubberBar(clock: controller.clock, trickplay: trickplay)
                     .opacity(controlsVisible ? 1 : 0)
             }
             .buttonStyle(ScrubberButtonStyle())
             .focused($focusedField, equals: .scrubber)
             .onMoveCommand { direction in
                 switch direction {
-                case .left: controller.jump(by: -Self.jumpSeconds)
-                case .right: controller.jump(by: Self.jumpSeconds)
+                case .left:
+                    controller.scrub(by: -Self.jumpSeconds)
+                    scrubGeneration += 1
+                case .right:
+                    controller.scrub(by: Self.jumpSeconds)
+                    scrubGeneration += 1
                 default: break
                 }
                 showControls()
@@ -364,35 +384,62 @@ struct PlayerControlsOverlay: View {
 
 private struct ScrubberBar: View {
     @ObservedObject var clock: PlaybackClock
-    let isPlaying: Bool
+    let trickplay: TrickplayProvider?
 
-    private var currentSeconds: TimeInterval { clock.currentSeconds }
+    @State private var previewWidth: CGFloat = 0
+
+    private static let trackHeight: CGFloat = 10
+    private static let headWidth: CGFloat = 6
+    private static let headHeight: CGFloat = 30
+    private static let previewGap: CGFloat = 28
+
+    /// The scrub target while scrubbing, otherwise the playback position
+    private var displayedSeconds: TimeInterval { clock.scrubSeconds ?? clock.currentSeconds }
     private var durationSeconds: TimeInterval { clock.durationSeconds }
 
     var body: some View {
         VStack(spacing: 14) {
             GeometryReader { proxy in
+                let width = proxy.size.width
                 ZStack(alignment: .leading) {
                     Capsule().fill(.white.opacity(0.25))
-                    Capsule().fill(.white)
-                        .frame(width: proxy.size.width * progress)
+                    Capsule().fill(.white.opacity(clock.scrubSeconds == nil ? 1 : 0.5))
+                        .frame(width: width * fraction(of: clock.currentSeconds))
+                }
+                .frame(height: Self.trackHeight)
+                .overlay(alignment: .leading) {
+                    if let scrubSeconds = clock.scrubSeconds {
+                        Capsule().fill(.white)
+                            .frame(width: Self.headWidth, height: Self.headHeight)
+                            .offset(x: width * fraction(of: scrubSeconds) - Self.headWidth / 2)
+                    }
+                }
+                .overlay(alignment: .bottomLeading) {
+                    if let scrubSeconds = clock.scrubSeconds {
+                        let center = width * fraction(of: scrubSeconds)
+                        let leading = min(max(0, center - previewWidth / 2), max(0, width - previewWidth))
+                        ScrubPreview(seconds: scrubSeconds, trickplay: trickplay)
+                            .fixedSize()
+                            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { previewWidth = $0 }
+                            .offset(x: leading, y: -(Self.trackHeight + Self.previewGap))
+                    }
                 }
             }
-            .frame(height: 10)
+            .frame(height: Self.trackHeight)
 
             HStack {
-                Text(Self.format(currentSeconds))
+                Text(Self.format(displayedSeconds))
                 Spacer()
-                Text("-" + Self.format(max(0, durationSeconds - currentSeconds)))
+                Text("-" + Self.format(max(0, durationSeconds - displayedSeconds)))
             }
             .font(.system(size: 22, weight: .medium).monospacedDigit())
             .foregroundStyle(.white.opacity(0.85))
         }
     }
 
-    private var progress: CGFloat {
+    private func fraction(of seconds: TimeInterval) -> CGFloat {
         guard durationSeconds > 0 else { return 0 }
-        return CGFloat(min(max(currentSeconds / durationSeconds, 0), 1))
+        return CGFloat(min(max(seconds / durationSeconds, 0), 1))
     }
 
     static func format(_ seconds: TimeInterval) -> String {
@@ -404,6 +451,49 @@ private struct ScrubberBar: View {
             return String(format: "%d:%02d:%02d", hours, minutes, secs)
         }
         return String(format: "%d:%02d", minutes, secs)
+    }
+}
+
+private struct ScrubPreview: View {
+    let seconds: TimeInterval
+    let trickplay: TrickplayProvider?
+
+    @State private var image: CGImage?
+
+    private static let thumbnailWidth: CGFloat = 400
+
+    var body: some View {
+        VStack(spacing: 12) {
+            if let trickplay {
+                ZStack {
+                    Color.black
+                    if let image {
+                        Image(decorative: image, scale: 1)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    }
+                }
+                .frame(
+                    width: Self.thumbnailWidth,
+                    height: Self.thumbnailWidth * CGFloat(trickplay.thumbnailHeight) / CGFloat(trickplay.thumbnailWidth)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.white.opacity(0.7), lineWidth: 2))
+                .shadow(color: .black.opacity(0.5), radius: 16)
+            }
+
+            Text(ScrubberBar.format(seconds))
+                .font(.system(size: 26, weight: .semibold).monospacedDigit())
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
+                .background(.black.opacity(0.6), in: Capsule())
+        }
+        .task(id: trickplay?.thumbnailIndex(at: seconds)) {
+            guard let trickplay else { return }
+            let loaded = await trickplay.thumbnail(at: trickplay.thumbnailIndex(at: seconds))
+            if !Task.isCancelled, let loaded { image = loaded }
+        }
     }
 }
 

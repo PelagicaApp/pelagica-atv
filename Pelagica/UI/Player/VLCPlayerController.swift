@@ -12,6 +12,8 @@ import UIKit
 final class PlaybackClock: ObservableObject {
     @Published fileprivate(set) var currentSeconds: TimeInterval = 0
     @Published fileprivate(set) var durationSeconds: TimeInterval = 0
+    /// Where the user is scrubbing to, before the seek is committed. `nil` when not scrubbing.
+    @Published fileprivate(set) var scrubSeconds: TimeInterval?
 }
 
 final class VLCPlayerController: NSObject, ObservableObject {
@@ -44,6 +46,11 @@ final class VLCPlayerController: NSObject, ObservableObject {
     private var didApplyInitialTracks = false
     private var didReachEnd = false
     private var lastProgressReport: TimeInterval = -.infinity
+    /// VLC keeps reporting the pre-seek time for a moment after a seek. Those updates are ignored until it lands near the target (or the deadline passes) so the scrubber doesn't snap back
+    private var pendingSeek: (target: TimeInterval, deadline: Date)?
+
+    private static let seekSettleTolerance: TimeInterval = 1.5
+    private static let seekSettleTimeout: TimeInterval = 3
 
     /// Jellyfin stream index -> VLC subtitle track ID for external subtitles loaded as playback slaves.
     private var externalSubtitleTrackIDs: [Int: Int32] = [:]
@@ -84,6 +91,8 @@ final class VLCPlayerController: NSObject, ObservableObject {
         didReachEnd = false
         externalSubtitleTrackIDs = [:]
         awaitingExternalSubtitle = nil
+        pendingSeek = nil
+        clock.scrubSeconds = nil
         durationSeconds = knownDurationSeconds ?? 0
         currentSeconds = startSeconds
         setBuffering(true)
@@ -183,12 +192,34 @@ final class VLCPlayerController: NSObject, ObservableObject {
     func seek(to seconds: TimeInterval) {
         let clamped = max(0, durationSeconds > 0 ? min(seconds, durationSeconds - 1) : seconds)
         player.time = VLCTime(int: Int32(clamped * 1000))
+        pendingSeek = (clamped, Date().addingTimeInterval(Self.seekSettleTimeout))
         currentSeconds = clamped
         publishTimeline()
     }
 
     func jump(by seconds: TimeInterval) {
         seek(to: currentSeconds + seconds)
+    }
+
+    // MARK: Scrubbing
+
+    var isScrubbing: Bool { clock.scrubSeconds != nil }
+
+    /// Moves the scrub position without touching playback; call `commitScrub()` to seek there
+    func scrub(by seconds: TimeInterval) {
+        let base = clock.scrubSeconds ?? currentSeconds
+        let upperBound = durationSeconds > 0 ? durationSeconds - 1 : .greatestFiniteMagnitude
+        clock.scrubSeconds = min(max(0, base + seconds), upperBound)
+    }
+
+    func commitScrub() {
+        guard let target = clock.scrubSeconds else { return }
+        clock.scrubSeconds = nil
+        seek(to: target)
+    }
+
+    func cancelScrub() {
+        clock.scrubSeconds = nil
     }
 
     // MARK: Tracks
@@ -309,6 +340,13 @@ final class VLCPlayerController: NSObject, ObservableObject {
     private func handleTimeChange() {
         setBuffering(false)
         let seconds = Double(player.time.intValue) / 1000
+        if let pendingSeek {
+            if abs(seconds - pendingSeek.target) <= Self.seekSettleTolerance || Date() >= pendingSeek.deadline {
+                self.pendingSeek = nil
+            } else {
+                return
+            }
+        }
         if seconds.isFinite { currentSeconds = seconds }
         if let length = player.media?.length.intValue, length > 0, Double(length) / 1000 != durationSeconds {
             durationSeconds = Double(length) / 1000

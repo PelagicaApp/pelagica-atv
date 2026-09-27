@@ -32,6 +32,7 @@ struct VideoPlayerView: View {
     @State private var didFailToResolve = false
     @State private var introRange: ClosedRange<TimeInterval>?
     @State private var outroRange: ClosedRange<TimeInterval>?
+    @State private var trickplay: TrickplayProvider?
 
     init(item: BaseItemDto, startTicks: Int = 0) {
         self.item = item
@@ -65,6 +66,7 @@ struct VideoPlayerView: View {
                     selectedSubtitleIndex: selectedSubtitleStreamIndex,
                     introRange: introRange,
                     outroRange: outroRange,
+                    trickplay: trickplay,
                     onSelectAudio: selectAudioTrack,
                     onSelectSubtitle: selectSubtitleTrack,
                     onClose: close
@@ -97,6 +99,9 @@ struct VideoPlayerView: View {
             async let segments: Void = fetchSkippableSegments()
             async let artwork: Void = loadNowPlayingArtwork()
             _ = await (playback, segments, artwork)
+        }
+        .task(id: currentMediaSourceID) {
+            await loadTrickplay()
         }
     }
 
@@ -415,6 +420,18 @@ struct VideoPlayerView: View {
             }
         } catch {
         }
+    }
+
+    private func loadTrickplay() async {
+        trickplay = nil
+        guard let client = appState.client, let itemID = currentItem.id, let mediaSourceID = currentMediaSourceID else { return }
+        var source = currentItem
+        if source.trickplay == nil {
+            guard let fetched = try? await client.send(Paths.getItem(itemID: itemID, userID: appState.currentUser?.id)).value else { return }
+            source = fetched
+        }
+        guard !Task.isCancelled else { return }
+        trickplay = TrickplayProvider(item: source, mediaSourceID: mediaSourceID, client: client)
     }
 
     private func loadNowPlayingArtwork() async {
