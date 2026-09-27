@@ -87,6 +87,9 @@ struct HomeTabView: View {
         }
         .onDisappear { path = NavigationPath() }
         .task { await loadHome() }
+        .onChange(of: appState.playbackStopCount) {
+            Task { await refreshProgressRows() }
+        }
     }
 
     private static let topScrollAnchor = "homeTop"
@@ -206,6 +209,43 @@ struct HomeTabView: View {
                     if items.isEmpty { hasMediaBarSection = false }
                 }
             }
+        }
+    }
+
+    private func refreshProgressRows() async {
+        guard let client = appState.client, !isLoadingConfig else { return }
+
+        let sections = (configStore.config.homeScreenSections ?? []).filter { section in
+            if case .mediaBar = section { return false }
+            return true
+        }
+        guard sections.count == slots.count else { return }
+
+        await withTaskGroup(of: (Int, [HomeRow]).self) { group in
+            for (index, section) in sections.enumerated() where Self.showsProgress(section) {
+                group.addTask {
+                    (index, await self.fetchRows(for: section, client: client))
+                }
+            }
+
+            for await (index, rows) in group where index < slots.count {
+                let oldRows = slots[index].rows
+                slots[index].rows = rows.enumerated().map { offset, row in
+                    var row = row
+                    if offset < oldRows.count { row.id = oldRows[offset].id }
+                    return row
+                }
+                slots[index].isLoading = false
+            }
+        }
+    }
+
+    nonisolated private static func showsProgress(_ section: HomeScreenSection) -> Bool {
+        switch section {
+        case .continueWatching, .nextUp, .resume:
+            return true
+        default:
+            return false
         }
     }
 
@@ -653,7 +693,7 @@ private enum HomeRowKind {
 }
 
 private struct HomeRow: Identifiable {
-    let id = UUID()
+    var id = UUID()
     let title: String
     let items: [BaseItemDto]
     let kind: HomeRowKind
