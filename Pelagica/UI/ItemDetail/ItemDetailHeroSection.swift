@@ -196,11 +196,13 @@ struct ItemDetailHeroSection: View {
                 .buttonStyle(DetailActionButtonStyle(emphasis: .secondary))
             }
 
-            Button(action: onToggleWatchlist) {
-                Label(isWatchlist ? i18n.t("item:remove_from_watchlist") : i18n.t("item:add_to_watchlist"), systemImage: isWatchlist ? "bookmark.fill" : "bookmark")
+            if item.type == .series || item.type == .movie {
+                Button(action: onToggleWatchlist) {
+                    Label(isWatchlist ? i18n.t("item:remove_from_watchlist") : i18n.t("item:add_to_watchlist"), systemImage: isWatchlist ? "bookmark.fill" : "bookmark")
+                }
+                .buttonStyle(DetailActionButtonStyle(emphasis: .secondary))
+                .disabled(isTogglingWatchlist)
             }
-            .buttonStyle(DetailActionButtonStyle(emphasis: .secondary))
-            .disabled(isTogglingWatchlist)
         }
         .padding(.top, 10)
     }

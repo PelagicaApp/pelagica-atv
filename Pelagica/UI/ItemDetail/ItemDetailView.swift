@@ -23,6 +23,8 @@ struct ItemDetailView: View {
     @State private var selectedSeasonID: String?
     @State private var episodes: [BaseItemDto] = []
 
+    @State private var boxSetItems: [BaseItemDto] = []
+
     @State private var playbackTarget: PlaybackTarget?
     @State private var localTrailers: [BaseItemDto] = []
 
@@ -30,6 +32,7 @@ struct ItemDetailView: View {
     @Namespace private var seasonsNamespace
     @Namespace private var episodesNamespace
     @Namespace private var similarNamespace
+    @Namespace private var boxSetNamespace
     @FocusState private var isPlayButtonFocused: Bool
 
     init(item: BaseItemDto) {
@@ -58,7 +61,15 @@ struct ItemDetailView: View {
                             onSelectSeason: { await loadEpisodes(seasonID: $0) }
                         )
                     }
-                    
+
+                    if item.type == .boxSet, !boxSetItems.isEmpty {
+                        ItemDetailBoxSetSection(
+                            items: boxSetItems,
+                            nextItemID: nextBoxSetItem?.id,
+                            namespace: boxSetNamespace
+                        )
+                    }
+
                     if localTrailers.count > 1 {
                         ItemTrailersSection(
                             trailers: localTrailers,
@@ -87,6 +98,9 @@ struct ItemDetailView: View {
                 await loadNextEpisode()
                 await loadSeasons()
             }
+            if item.type == .boxSet {
+                await loadBoxSetItems()
+            }
             if item.type == .movie {
                 if configStore.config.itemPage?.showCollections != false {
                     await loadItemCollections()
@@ -106,6 +120,9 @@ struct ItemDetailView: View {
                     if let selectedSeasonID {
                         await loadEpisodes(seasonID: selectedSeasonID)
                     }
+                }
+                if item.type == .boxSet {
+                    await loadBoxSetItems()
                 }
             }
         }
@@ -134,14 +151,20 @@ struct ItemDetailView: View {
             return i18n.t("item:play_episode", ["season": season, "episode": episode])
         }
 
-        let hasProgress = (item.userData?.playbackPositionTicks ?? 0) > 0 && item.userData?.isPlayed != true
+        let playable = item.type == .boxSet ? nextBoxSetItem : item
+        guard let playable else { return i18n.t("item:play") }
+        let hasProgress = (playable.userData?.playbackPositionTicks ?? 0) > 0 && playable.userData?.isPlayed != true
         return hasProgress ? i18n.t("resume") : i18n.t("item:play")
     }
 
     // MARK: - Actions
 
     private func play() {
-        let target = item.type == .series ? nextEpisode : item
+        let target: BaseItemDto? = switch item.type {
+        case .series: nextEpisode
+        case .boxSet: nextBoxSetItem
+        default: item
+        }
         guard let target else { return }
         startPlayback(for: target)
     }
@@ -283,6 +306,21 @@ struct ItemDetailView: View {
         }
     }
 
+    private func loadBoxSetItems() async {
+        guard let client = appState.client, let boxSetID = item.id else { return }
+        let sort = configStore.config.itemPage?.collectionSort ?? .premiereDateAsc
+        do {
+            let result = try await client.send(Paths.getItems(parameters: .init(
+                userID: appState.currentUser?.id,
+                parentID: boxSetID,
+                enableUserData: true
+            ))).value
+            boxSetItems = CollectionSorting.sort(result.items ?? [], by: sort)
+        } catch {
+            // The box set row just won't show if its items fail to load.
+        }
+    }
+
     private func laodSimilarItems() async {
         guard let client = appState.client, let itemID = item.id else { return }
         do {
@@ -309,6 +347,18 @@ struct ItemDetailView: View {
         } catch {
 
         }
+    }
+
+    // MARK: - Box set
+
+    private var nextBoxSetItem: BaseItemDto? {
+        let playable = CollectionSorting.sort(boxSetItems, by: .premiereDateAsc).filter { $0.isFolder != true }
+        let inProgress = playable.first {
+            ($0.userData?.playbackPositionTicks ?? 0) > 0 && $0.userData?.isPlayed != true
+        }
+        return inProgress
+            ?? playable.first { $0.userData?.isPlayed != true }
+            ?? playable.first
     }
 
     // MARK: - Trailer

@@ -15,7 +15,7 @@ struct LibraryView: View {
     @State private var errorMessage: String?
     @State private var path = NavigationPath()
 
-    private let supportedLibraryTypes: [CollectionType] = [.movies, .tvshows]
+    private let supportedLibraryTypes: [CollectionType] = [.movies, .tvshows, .boxsets]
 
     private let columns = [GridItem(.adaptive(minimum: 380), spacing: 60)]
 
