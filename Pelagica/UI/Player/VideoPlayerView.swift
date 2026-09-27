@@ -91,10 +91,12 @@ struct VideoPlayerView: View {
             outroRange = nil
             selectedSubtitleStreamIndex = nil
             burnedInSubtitleStreamIndex = nil
+            controller.setNowPlayingArtwork(nil)
             let ticks = currentItem.id == item.id ? startTicks : 0
             async let playback: Void = resolvePlayback(atTicks: ticks, applyServerDefaults: true)
             async let segments: Void = fetchSkippableSegments()
-            _ = await (playback, segments)
+            async let artwork: Void = loadNowPlayingArtwork()
+            _ = await (playback, segments, artwork)
         }
     }
 
@@ -385,6 +387,7 @@ struct VideoPlayerView: View {
                 audioStream: method == .transcode ? nil : audioStreams.first { $0.index == selectedAudioStreamIndex },
                 subtitle: subtitleSelection(for: selectedSubtitle)
             )
+            controller.setNowPlayingMetadata(title: playerTitle, subtitle: playerSubtitle, overview: currentItem.overview)
             isLoaded = true
             reportPlaybackStarted(positionTicks: ticks)
         } catch {
@@ -412,6 +415,21 @@ struct VideoPlayerView: View {
             }
         } catch {
         }
+    }
+
+    private func loadNowPlayingArtwork() async {
+        guard let client = appState.client, let id = currentItem.id else { return }
+        let request = Paths.getItemImage(
+            itemID: id,
+            imageType: ImageType.primary.rawValue,
+            parameters: .init(fillWidth: 640, fillHeight: 960, tag: currentItem.imageTags?["Primary"])
+        )
+        guard let url = client.url(with: request, queryAPIKey: true) else { return }
+        guard
+            let (data, _) = try? await URLSession.shared.data(from: url),
+            let image = UIImage(data: data)
+        else { return }
+        controller.setNowPlayingArtwork(image)
     }
 
     private func resolvedServerURL(path: String, client: JellyfinClient) -> URL? {

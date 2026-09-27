@@ -36,6 +36,7 @@ final class VLCPlayerController: NSObject, ObservableObject {
     }
 
     private let player = VLCMediaPlayer()
+    private let nowPlaying = NowPlayingPublisher()
     private var embeddedAudioStreams: [MediaStream] = []
     private var embeddedSubtitleStreams: [MediaStream] = []
     private var pendingAudioStream: MediaStream?
@@ -96,12 +97,40 @@ final class VLCPlayerController: NSObject, ObservableObject {
         player.media = media
         player.play()
         UIApplication.shared.isIdleTimerDisabled = true
+        activateNowPlaying()
+        publishTimeline()
     }
 
     func stop() {
         player.stop()
         player.media = nil
+        nowPlaying.deactivate()
         UIApplication.shared.isIdleTimerDisabled = false
+    }
+
+    // MARK: Now Playing
+
+    func setNowPlayingMetadata(title: String, subtitle: String?, overview: String?) {
+        nowPlaying.setMetadata(title: title, subtitle: subtitle, overview: overview)
+        publishTimeline()
+    }
+
+    func setNowPlayingArtwork(_ image: UIImage?) {
+        nowPlaying.setArtwork(image)
+    }
+
+    private func activateNowPlaying() {
+        nowPlaying.activate(handlers: .init(
+            play: { [weak self] in self?.player.play() },
+            pause: { [weak self] in self?.player.pause() },
+            togglePlayPause: { [weak self] in self?.togglePlayPause() },
+            seek: { [weak self] in self?.seek(to: $0) },
+            jump: { [weak self] in self?.jump(by: $0) }
+        ))
+    }
+
+    private func publishTimeline() {
+        nowPlaying.updateTimeline(elapsed: currentSeconds, duration: durationSeconds, isPlaying: isPlaying)
     }
 
     // MARK: Transport
@@ -118,6 +147,7 @@ final class VLCPlayerController: NSObject, ObservableObject {
         let clamped = max(0, durationSeconds > 0 ? min(seconds, durationSeconds - 1) : seconds)
         player.time = VLCTime(int: Int32(clamped * 1000))
         currentSeconds = clamped
+        publishTimeline()
     }
 
     func jump(by seconds: TimeInterval) {
@@ -192,7 +222,9 @@ final class VLCPlayerController: NSObject, ObservableObject {
     // MARK: State updates
 
     private func setPlaying(_ value: Bool) {
-        if isPlaying != value { isPlaying = value }
+        guard isPlaying != value else { return }
+        isPlaying = value
+        publishTimeline()
     }
 
     private func setBuffering(_ value: Bool) {
@@ -241,14 +273,16 @@ final class VLCPlayerController: NSObject, ObservableObject {
         setBuffering(false)
         let seconds = Double(player.time.intValue) / 1000
         if seconds.isFinite { currentSeconds = seconds }
-        if let length = player.media?.length.intValue, length > 0 {
+        if let length = player.media?.length.intValue, length > 0, Double(length) / 1000 != durationSeconds {
             durationSeconds = Double(length) / 1000
+            publishTimeline()
         }
         resolveAwaitingExternalSubtitle()
 
         if abs(currentSeconds - lastProgressReport) >= 10 {
             lastProgressReport = currentSeconds
             onProgress?(currentSeconds, !player.isPlaying)
+            publishTimeline()
         }
     }
 
