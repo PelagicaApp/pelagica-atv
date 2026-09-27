@@ -3,12 +3,8 @@
 //  Pelagica
 //
 
-import AVKit
-import Combine
-import CoreMedia
 import Get
 import JellyfinAPI
-import SwiftAssRenderer
 import SwiftUI
 import UIKit
 
@@ -19,24 +15,23 @@ struct VideoPlayerView: View {
     let item: BaseItemDto
     var startTicks: Int = 0
 
+    @StateObject private var controller = VLCPlayerController()
+
     @State private var currentItem: BaseItemDto
-    @State private var streamURL: URL?
-    @State private var playerAsset: AVAsset?
-    @State private var startTimeSeconds: Double = 0
-    @State private var isTranscoded = false
+    @State private var isLoaded = false
+    @State private var playMethod: PlayMethod = .directPlay
     @State private var audioStreams: [MediaStream] = []
     @State private var selectedAudioStreamIndex: Int?
     @State private var subtitleStreams: [MediaStream] = []
     @State private var selectedSubtitleStreamIndex: Int?
-    @State private var subtitleContent: String?
-    @State private var hasAppliedDefaultSubtitle = false
+    @State private var burnedInSubtitleStreamIndex: Int?
     @State private var activeItemID: String?
     @State private var currentMediaSourceID: String?
     @State private var currentPlaySessionID: String?
+    @State private var didFallBackToTranscode = false
     @State private var didFailToResolve = false
     @State private var introRange: ClosedRange<TimeInterval>?
     @State private var outroRange: ClosedRange<TimeInterval>?
-    @State private var posterImageData: Data?
 
     init(item: BaseItemDto, startTicks: Int = 0) {
         self.item = item
@@ -48,60 +43,58 @@ struct VideoPlayerView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            if let streamURL, let playerAsset {
-                AVPlayerControllerView(
-                    asset: playerAsset,
-                    startTimeSeconds: startTimeSeconds,
-                    title: playerTitle,
-                    subtitle: playerSubtitle,
-                    overview: currentItem.overview,
-                    posterImageData: posterImageData,
-                    audioStreams: audioStreams,
-                    selectedAudioStreamIndex: selectedAudioStreamIndex,
-                    subtitleStreams: subtitleStreams,
-                    selectedSubtitleStreamIndex: selectedSubtitleStreamIndex,
-                    subtitleContent: subtitleContent,
-                    isTranscoded: isTranscoded,
-                    introRange: introRange,
-                    outroRange: outroRange,
-                    onAudioTrackSelected: switchAudioTrack,
-                    onSubtitleTrackSelected: selectSubtitleTrack,
-                    onProgress: reportProgress,
-                    onStopped: reportStopped,
-                    onPlaybackEnded: handlePlaybackEnded
-                )
-                // An audio-track switch on transcoded content resolves a new stream URL; forcing
-                // view identity on it makes SwiftUI tear down and recreate the player instead of
-                // trying to mutate one in place.
-                .id(streamURL)
+            VLCVideoSurface(view: controller.videoView)
                 .ignoresSafeArea()
-            } else if didFailToResolve {
+
+            if didFailToResolve {
                 VStack(spacing: 24) {
                     Text(i18n.t("player:playbackDecodeErrorFailed"))
                         .font(.title2)
                         .foregroundStyle(.white)
-                    Button(i18n.t("close")) { dismiss() }
+                    Button(i18n.t("close")) { close() }
                 }
+            } else if isLoaded {
+                PlayerControlsOverlay(
+                    controller: controller,
+                    title: playerTitle,
+                    subtitle: playerSubtitle,
+                    overview: currentItem.overview,
+                    audioStreams: audioStreams,
+                    selectedAudioIndex: selectedAudioStreamIndex,
+                    subtitleStreams: subtitleStreams,
+                    selectedSubtitleIndex: selectedSubtitleStreamIndex,
+                    introRange: introRange,
+                    outroRange: outroRange,
+                    onSelectAudio: selectAudioTrack,
+                    onSelectSubtitle: selectSubtitleTrack,
+                    onClose: close
+                )
             } else {
                 ProgressView()
                     .tint(.white)
             }
         }
+        .onAppear {
+            controller.onProgress = reportProgress
+            controller.onPlaybackEnded = handlePlaybackEnded
+            controller.onPlaybackFailed = handlePlaybackFailed
+        }
+        .onDisappear {
+            reportStopped(seconds: controller.currentSeconds)
+            controller.stop()
+        }
         .task(id: currentItem.id) {
-            streamURL = nil
-            playerAsset = nil
+            isLoaded = false
             didFailToResolve = false
+            didFallBackToTranscode = false
             introRange = nil
             outroRange = nil
-            posterImageData = nil
             selectedSubtitleStreamIndex = nil
-            subtitleContent = nil
-            hasAppliedDefaultSubtitle = false
+            burnedInSubtitleStreamIndex = nil
             let ticks = currentItem.id == item.id ? startTicks : 0
-            async let playback: Void = resolvePlayback(atTicks: ticks)
-            async let intro: Void = fetchSkippableSegments()
-            async let poster: Void = loadPosterImage()
-            _ = await (playback, intro, poster)
+            async let playback: Void = resolvePlayback(atTicks: ticks, applyServerDefaults: true)
+            async let segments: Void = fetchSkippableSegments()
+            _ = await (playback, segments)
         }
     }
 
@@ -119,13 +112,40 @@ struct VideoPlayerView: View {
         return "S\(season):E\(episode) \(currentItem.name ?? "")"
     }
 
+    private var isTranscoded: Bool { playMethod == .transcode }
+
+    private func close() {
+        dismiss()
+    }
+
     private func handlePlaybackEnded() {
+        reportStopped(seconds: controller.currentSeconds)
+        activeItemID = nil
         Task {
             if let next = await fetchNextEpisode() {
                 currentItem = next
             } else {
                 dismiss()
             }
+        }
+    }
+
+    /// VLC can decode almost anything, so a direct-play failure usually means a broken file or an unreachable static stream.
+    /// Give the server one chance to transcode before giving up.
+    private func handlePlaybackFailed() {
+        guard !isTranscoded, !didFallBackToTranscode else {
+            didFailToResolve = true
+            return
+        }
+        print("Pelagica playback: direct play failed, retrying with a server transcode")
+        didFallBackToTranscode = true
+        let ticks = Int(controller.currentSeconds * 10_000_000)
+        Task {
+            await resolvePlayback(
+                atTicks: ticks,
+                audioStreamIndex: selectedAudioStreamIndex,
+                mediaSourceID: currentMediaSourceID
+            )
         }
     }
 
@@ -154,82 +174,148 @@ struct VideoPlayerView: View {
         }
     }
 
-    private func switchAudioTrack(to streamIndex: Int, atSeconds seconds: TimeInterval) {
-        let ticks = Int(seconds * 10_000_000)
-        Task { await resolvePlayback(atTicks: ticks, audioStreamIndex: streamIndex, mediaSourceID: currentMediaSourceID) }
+    // MARK: - Track selection
+
+    private func selectAudioTrack(_ stream: MediaStream) {
+        guard let index = stream.index, index != selectedAudioStreamIndex else { return }
+        selectedAudioStreamIndex = index
+
+        if isTranscoded {
+            let ticks = Int(controller.currentSeconds * 10_000_000)
+            Task { await resolvePlayback(atTicks: ticks, audioStreamIndex: index, mediaSourceID: currentMediaSourceID) }
+        } else {
+            controller.selectAudio(stream)
+        }
     }
 
     private func selectSubtitleTrack(_ stream: MediaStream?) {
+        guard stream?.index != selectedSubtitleStreamIndex else { return }
         selectedSubtitleStreamIndex = stream?.index
-        guard let stream, let index = stream.index else {
-            subtitleContent = nil
+
+        let needsBurnIn = isTranscoded && stream.map(requiresBurnIn) == true
+        if needsBurnIn || burnedInSubtitleStreamIndex != nil {
+            let ticks = Int(controller.currentSeconds * 10_000_000)
+            Task {
+                await resolvePlayback(
+                    atTicks: ticks,
+                    audioStreamIndex: selectedAudioStreamIndex,
+                    subtitleStreamIndex: needsBurnIn ? stream?.index : nil,
+                    mediaSourceID: currentMediaSourceID
+                )
+            }
             return
         }
-        Task { await loadSubtitleContent(streamIndex: index) }
+        controller.selectSubtitle(subtitleSelection(for: stream))
     }
 
-    private func loadSubtitleContent(streamIndex: Int) async {
-        guard let client = appState.client, let itemID = currentItem.id, let mediaSourceID = currentMediaSourceID else { return }
-        do {
-            let ass = try await client.send(Paths.getSubtitle(
-                routeItemID: itemID,
-                routeMediaSourceID: mediaSourceID,
-                routeIndex: streamIndex,
-                routeFormat: "ass"
-            )).value
-            print("Pelagica playback: loaded subtitle stream index \(streamIndex), \(ass.count) character(s)")
-            subtitleContent = ass
-        } catch {
-            print("Pelagica playback: failed to load subtitle stream index \(streamIndex): \(error)")
-            subtitleContent = nil
+    private func requiresBurnIn(_ stream: MediaStream) -> Bool {
+        stream.isTextSubtitleStream == false
+    }
+
+    private func subtitleSelection(for stream: MediaStream?) -> VLCPlayerController.SubtitleSelection {
+        guard let stream else { return .off }
+        if stream.index == burnedInSubtitleStreamIndex {
+            return .off
         }
+        if !isTranscoded, stream.isExternal != true {
+            return .embedded(stream)
+        }
+        guard let url = externalSubtitleURL(for: stream) else { return .off }
+        return .external(stream, url)
+    }
+
+    private func externalSubtitleURL(for stream: MediaStream) -> URL? {
+        guard let client = appState.client else { return nil }
+        if let deliveryURL = stream.deliveryURL, stream.deliveryMethod == .external {
+            return resolvedServerURL(path: deliveryURL, client: client)
+        }
+        guard let itemID = currentItem.id, let mediaSourceID = currentMediaSourceID, let index = stream.index else { return nil }
+        let format = ["ass", "ssa"].contains(stream.codec?.lowercased() ?? "") ? "ass" : "srt"
+        return resolvedServerURL(path: "/Videos/\(itemID)/\(mediaSourceID)/Subtitles/\(index)/0/Stream.\(format)", client: client)
     }
 
     // MARK: - Playback resolution
 
+    private static let maxStreamingBitrate = 200_000_000
+
     private static let deviceProfile = DeviceProfile(
         directPlayProfiles: [
             DirectPlayProfile(
-                audioCodec: "aac,ac3,eac3,mp3,flac,opus",
-                container: "mp4,m4v,mov",
-                type: .video,
-                videoCodec: "h264,hevc"
+                container: [
+                    "mkv", "webm", "mp4", "m4v", "mov", "avi", "divx", "xvid", "ts", "m2ts", "mts", "mpegts",
+                    "mpg", "mpeg", "vob", "flv", "wmv", "asf", "3gp", "3g2", "ogv", "ogm", "ogg", "rm", "rmvb",
+                    "dv", "mxf", "wtv", "nut", "f4v", "hls",
+                ].joined(separator: ","),
+                type: .video
             ),
+            DirectPlayProfile(type: .audio),
         ],
+        maxStaticBitrate: maxStreamingBitrate,
+        maxStreamingBitrate: maxStreamingBitrate,
+        subtitleProfiles: subtitleProfiles,
         transcodingProfiles: [
             TranscodingProfile(
                 protocol: .hls,
-                audioCodec: "aac",
+                audioCodec: "aac,ac3,eac3,mp3,flac,opus",
                 container: "ts",
                 context: .streaming,
-                maxAudioChannels: "6",
+                maxAudioChannels: "8",
                 minSegments: 1,
                 type: .video,
-                videoCodec: "h264"
+                videoCodec: "hevc,h264"
             ),
         ]
     )
 
-    private func resolvePlayback(atTicks ticks: Int, audioStreamIndex: Int? = nil, mediaSourceID: String? = nil) async {
+    private static let textSubtitleFormats = ["ass", "ssa", "srt", "subrip", "vtt", "webvtt", "sub", "smi", "ttml", "mov_text"]
+    private static let imageSubtitleFormats = ["pgs", "pgssub", "dvdsub", "dvbsub", "vobsub", "xsub"]
+
+    private static let subtitleProfiles: [SubtitleProfile] =
+        (textSubtitleFormats + imageSubtitleFormats).map { SubtitleProfile(format: $0, method: .embed) }
+        + textSubtitleFormats.map { SubtitleProfile(format: $0, method: .external) }
+        + imageSubtitleFormats.map { SubtitleProfile(format: $0, method: .encode) }
+
+    private func resolvePlayback(
+        atTicks ticks: Int,
+        audioStreamIndex: Int? = nil,
+        subtitleStreamIndex: Int? = nil,
+        mediaSourceID: String? = nil,
+        applyServerDefaults: Bool = false
+    ) async {
         guard let client = appState.client, let itemID = currentItem.id else {
             didFailToResolve = true
             return
         }
 
+        let allowDirect = !didFallBackToTranscode
         do {
             let info = try await client.send(Paths.getPostedPlaybackInfo(
                 itemID: itemID,
                 parameters: .init(
                     userID: appState.currentUser?.id,
+                    maxStreamingBitrate: Self.maxStreamingBitrate,
                     startTimeTicks: ticks,
                     audioStreamIndex: audioStreamIndex,
-                    mediaSourceID: mediaSourceID
+                    subtitleStreamIndex: subtitleStreamIndex,
+                    mediaSourceID: mediaSourceID,
+                    enableDirectPlay: allowDirect,
+                    enableDirectStream: allowDirect,
+                    enableTranscoding: true,
+                    allowVideoStreamCopy: true,
+                    allowAudioStreamCopy: true
                 ),
                 PlaybackInfoDto(
+                    allowAudioStreamCopy: true,
+                    allowVideoStreamCopy: true,
                     audioStreamIndex: audioStreamIndex,
                     deviceProfile: Self.deviceProfile,
+                    enableDirectPlay: allowDirect,
+                    enableDirectStream: allowDirect,
+                    enableTranscoding: true,
+                    maxStreamingBitrate: Self.maxStreamingBitrate,
                     mediaSourceID: mediaSourceID,
                     startTimeTicks: ticks,
+                    subtitleStreamIndex: subtitleStreamIndex,
                     userID: appState.currentUser?.id
                 )
             )).value
@@ -240,8 +326,8 @@ struct VideoPlayerView: View {
             }
 
             let url: URL?
-            let transcoded: Bool
-            if mediaSource.isSupportsDirectPlay == true {
+            let method: PlayMethod
+            if allowDirect, mediaSource.isSupportsDirectPlay == true || mediaSource.isSupportsDirectStream == true {
                 let request = Paths.getVideoStream(itemID: itemID, parameters: .init(
                     container: mediaSource.container,
                     isStatic: true,
@@ -249,15 +335,13 @@ struct VideoPlayerView: View {
                     mediaSourceID: mediaSourceID
                 ))
                 url = client.url(with: request, queryAPIKey: true)
-                startTimeSeconds = Double(ticks) / 10_000_000
-                transcoded = false
+                method = mediaSource.isSupportsDirectPlay == true ? .directPlay : .directStream
             } else if let transcodingPath = mediaSource.transcodingURL {
-                url = resolvedTranscodingURL(path: transcodingPath, client: client)
-                startTimeSeconds = Double(ticks) / 10_000_000
-                transcoded = true
+                url = resolvedServerURL(path: transcodingPath, client: client)
+                method = .transcode
             } else {
                 url = nil
-                transcoded = false
+                method = .transcode
             }
 
             guard let url else {
@@ -269,35 +353,39 @@ struct VideoPlayerView: View {
                 didFailToResolve = true
                 return
             }
-            print("Pelagica playback: resolved stream URL: \(url.absoluteString)")
+            print("Pelagica playback: \(method.rawValue) via \(url.absoluteString)")
 
-            let asset: AVAsset = transcoded ? AVURLAsset(url: url) : await Self.directPlayAsset(for: url)
-
-            let streams = mediaSource.mediaStreams?.filter { $0.type == .audio } ?? []
-            print("""
-            Pelagica playback: mediaStreams total: \(mediaSource.mediaStreams?.count ?? -1), \
-            audio streams: \(streams.count) — \
-            \(streams.map { "[index: \($0.index.map(String.init) ?? "nil"), title: \($0.displayTitle ?? "nil"), language: \($0.language ?? "nil")]" }.joined(separator: ", "))
-            """)
-            audioStreams = streams
-            selectedAudioStreamIndex = audioStreamIndex ?? mediaSource.defaultAudioStreamIndex ?? streams.first?.index
-
-            subtitleStreams = mediaSource.mediaStreams?.filter { $0.type == .subtitle } ?? []
+            let mediaStreams = mediaSource.mediaStreams ?? []
+            audioStreams = mediaStreams.filter { $0.type == .audio }
+            subtitleStreams = mediaStreams.filter { $0.type == .subtitle }
+            selectedAudioStreamIndex = audioStreamIndex ?? mediaSource.defaultAudioStreamIndex ?? audioStreams.first?.index
+            if applyServerDefaults {
+                let defaultIndex = mediaSource.defaultSubtitleStreamIndex ?? -1
+                selectedSubtitleStreamIndex = subtitleStreams.contains { $0.index == defaultIndex } ? defaultIndex : nil
+            }
 
             activeItemID = itemID
             currentMediaSourceID = mediaSourceID
             currentPlaySessionID = info.playSessionID
-            isTranscoded = transcoded
-            streamURL = url
-            playerAsset = asset
+            playMethod = method
+            burnedInSubtitleStreamIndex = method == .transcode ? subtitleStreamIndex : nil
 
-            if !hasAppliedDefaultSubtitle {
-                hasAppliedDefaultSubtitle = true
-                if let defaultIndex = mediaSource.defaultSubtitleStreamIndex,
-                   let defaultStream = subtitleStreams.first(where: { $0.index == defaultIndex }) {
-                    selectSubtitleTrack(defaultStream)
-                }
+            var selectedSubtitle = subtitleStreams.first { $0.index == selectedSubtitleStreamIndex }
+            if method == .transcode, applyServerDefaults, let stream = selectedSubtitle, requiresBurnIn(stream) {
+                // A default image subtitle can't be attached to a transcode after the fact
+                selectedSubtitle = nil
+                selectedSubtitleStreamIndex = nil
             }
+
+            controller.load(
+                url: url,
+                startSeconds: Double(ticks) / 10_000_000,
+                knownDurationSeconds: currentItem.runTimeTicks.map { Double($0) / 10_000_000 },
+                mediaStreams: method == .transcode ? [] : mediaStreams,
+                audioStream: method == .transcode ? nil : audioStreams.first { $0.index == selectedAudioStreamIndex },
+                subtitle: subtitleSelection(for: selectedSubtitle)
+            )
+            isLoaded = true
             reportPlaybackStarted(positionTicks: ticks)
         } catch {
             print("Pelagica playback: PlaybackInfo request failed for item \(itemID): \(error)")
@@ -326,58 +414,7 @@ struct VideoPlayerView: View {
         }
     }
 
-    private func loadPosterImage() async {
-        guard let client = appState.client, let id = currentItem.id else { return }
-        let request = Paths.getItemImage(
-            itemID: id,
-            imageType: ImageType.primary.rawValue,
-            parameters: .init(fillWidth: 640, fillHeight: 960, tag: currentItem.imageTags?["Primary"])
-        )
-        guard let url = client.url(with: request, queryAPIKey: true) else { return }
-
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            posterImageData = data
-        } catch {
-            // The info panel just won't show artwork if the poster fails to load.
-        }
-    }
-
-    /// Strips embedded subtitle tracks from a direct-play asset so AVFoundation never exposes a
-    /// legible media-selection group — the native "Subtitles" affordance AVKit shows automatically
-    /// otherwise duplicates our own custom menu and can't render most subtitle formats (e.g. ASS)
-    /// anyway. Only attempted when there's a single audio track: composing multiple independent
-    /// audio tracks would break their mutual exclusivity as selectable alternates, so files with
-    /// more than one embedded audio track are left untouched.
-    private static func directPlayAsset(for url: URL) async -> AVAsset {
-        let asset = AVURLAsset(url: url)
-        do {
-            let audioTracks = try await asset.loadTracks(withMediaType: .audio)
-            guard audioTracks.count <= 1 else { return asset }
-
-            let videoTracks = try await asset.loadTracks(withMediaType: .video)
-            guard let videoTrack = videoTracks.first else { return asset }
-
-            let duration = try await asset.load(.duration)
-            let range = CMTimeRange(start: .zero, duration: duration)
-
-            let composition = AVMutableComposition()
-            let compVideoTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
-            try compVideoTrack?.insertTimeRange(range, of: videoTrack, at: .zero)
-
-            if let audioTrack = audioTracks.first {
-                let compAudioTrack = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
-                try compAudioTrack?.insertTimeRange(range, of: audioTrack, at: .zero)
-            }
-
-            return composition
-        } catch {
-            print("Pelagica playback: couldn't strip embedded subtitle tracks, playing source as-is: \(error)")
-            return asset
-        }
-    }
-
-    private func resolvedTranscodingURL(path: String, client: JellyfinClient) -> URL? {
+    private func resolvedServerURL(path: String, client: JellyfinClient) -> URL? {
         guard var components = URLComponents(string: path) else { return nil }
         let hasAPIKey = components.queryItems?.contains { $0.name.lowercased() == "api_key" } ?? false
         if !hasAPIKey, let token = client.accessToken {
@@ -397,9 +434,10 @@ struct VideoPlayerView: View {
                 isPaused: false,
                 itemID: itemID,
                 mediaSourceID: mediaSourceID,
-                playMethod: isTranscoded ? .transcode : .directPlay,
+                playMethod: playMethod,
                 playSessionID: currentPlaySessionID,
-                positionTicks: positionTicks
+                positionTicks: positionTicks,
+                subtitleStreamIndex: selectedSubtitleStreamIndex
             )))
         }
     }
@@ -414,9 +452,10 @@ struct VideoPlayerView: View {
                 isPaused: isPaused,
                 itemID: itemID,
                 mediaSourceID: mediaSourceID,
-                playMethod: isTranscoded ? .transcode : .directPlay,
+                playMethod: playMethod,
                 playSessionID: currentPlaySessionID,
-                positionTicks: positionTicks
+                positionTicks: positionTicks,
+                subtitleStreamIndex: selectedSubtitleStreamIndex
             )))
         }
     }
@@ -435,422 +474,10 @@ struct VideoPlayerView: View {
     }
 }
 
-private struct AVPlayerControllerView: UIViewControllerRepresentable {
-    let asset: AVAsset
-    let startTimeSeconds: Double
-    let title: String
-    var subtitle: String?
-    var overview: String?
-    var posterImageData: Data?
-    let audioStreams: [MediaStream]
-    let selectedAudioStreamIndex: Int?
-    let subtitleStreams: [MediaStream]
-    let selectedSubtitleStreamIndex: Int?
-    let subtitleContent: String?
-    let isTranscoded: Bool
-    let introRange: ClosedRange<TimeInterval>?
-    let outroRange: ClosedRange<TimeInterval>?
-    let onAudioTrackSelected: (Int, TimeInterval) -> Void
-    let onSubtitleTrackSelected: (MediaStream?) -> Void
-    let onProgress: (TimeInterval, Bool) -> Void
-    let onStopped: (TimeInterval) -> Void
-    let onPlaybackEnded: () -> Void
+private struct VLCVideoSurface: UIViewRepresentable {
+    let view: UIView
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
+    func makeUIView(context: Context) -> UIView { view }
 
-    func makeUIViewController(context: Context) -> AVPlayerViewController {
-        let item = AVPlayerItem(asset: asset)
-        item.externalMetadata = metadataItems()
-        context.coordinator.observe(item, onPlaybackEnded: onPlaybackEnded)
-
-        let player = AVPlayer(playerItem: item)
-        if startTimeSeconds > 0 {
-            player.seek(to: CMTime(seconds: startTimeSeconds, preferredTimescale: 1))
-        }
-        context.coordinator.configureReporting(onProgress: onProgress, onStopped: onStopped, player: player)
-
-        let controller = AVPlayerViewController()
-        controller.player = player
-        context.coordinator.attachAssSubtitles(to: controller, fontConfig: Self.fontConfig)
-        context.coordinator.updateAssSubtitleContent(subtitleContent)
-        context.coordinator.configureTrackMenus(
-            audioStreams: audioStreams,
-            selectedAudioIndex: selectedAudioStreamIndex,
-            subtitleStreams: subtitleStreams,
-            selectedSubtitleIndex: selectedSubtitleStreamIndex,
-            isTranscoded: isTranscoded,
-            onAudioTrackSelected: onAudioTrackSelected,
-            onSubtitleTrackSelected: onSubtitleTrackSelected,
-            controller: controller
-        )
-        context.coordinator.configureSkippableSegments(intro: introRange, outro: outroRange, controller: controller)
-        player.play()
-        return controller
-    }
-
-    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
-        uiViewController.player?.currentItem?.externalMetadata = metadataItems()
-        context.coordinator.updateAssSubtitleContent(subtitleContent)
-        context.coordinator.configureTrackMenus(
-            audioStreams: audioStreams,
-            selectedAudioIndex: selectedAudioStreamIndex,
-            subtitleStreams: subtitleStreams,
-            selectedSubtitleIndex: selectedSubtitleStreamIndex,
-            isTranscoded: isTranscoded,
-            onAudioTrackSelected: onAudioTrackSelected,
-            onSubtitleTrackSelected: onSubtitleTrackSelected,
-            controller: uiViewController
-        )
-        context.coordinator.configureSkippableSegments(intro: introRange, outro: outroRange, controller: uiViewController)
-    }
-
-    static func dismantleUIViewController(_ uiViewController: AVPlayerViewController, coordinator: Coordinator) {
-        coordinator.reportStopped()
-        uiViewController.player?.pause()
-        uiViewController.player = nil
-    }
-
-    private func metadataItems() -> [AVMetadataItem] {
-        var items = [makeMetadataItem(identifier: .commonIdentifierTitle, value: title)]
-        if let subtitle {
-            items.append(makeMetadataItem(identifier: .iTunesMetadataTrackSubTitle, value: subtitle))
-        }
-        if let overview {
-            items.append(makeMetadataItem(identifier: .commonIdentifierDescription, value: overview))
-        }
-        if let posterImageData {
-            items.append(makeArtworkMetadataItem(data: posterImageData))
-        }
-        return items
-    }
-
-    private func makeMetadataItem(identifier: AVMetadataIdentifier, value: String) -> AVMetadataItem {
-        let item = AVMutableMetadataItem()
-        item.identifier = identifier
-        item.value = value as NSString
-        item.extendedLanguageTag = "und"
-        return item
-    }
-
-    private func makeArtworkMetadataItem(data: Data) -> AVMetadataItem {
-        let item = AVMutableMetadataItem()
-        item.identifier = .commonIdentifierArtwork
-        item.value = data as NSData
-        item.dataType = isPNG(data) ? kCMMetadataBaseDataType_PNG as String : kCMMetadataBaseDataType_JPEG as String
-        item.extendedLanguageTag = "und"
-        return item
-    }
-
-    private func isPNG(_ data: Data) -> Bool {
-        data.starts(with: [0x89, 0x50, 0x4E, 0x47])
-    }
-
-    private static let fontConfig: FontConfig = {
-        let fontsPath = FileManager.default.temporaryDirectory.appendingPathComponent("PelagicaAssFonts", isDirectory: true)
-        try? FileManager.default.createDirectory(at: fontsPath, withIntermediateDirectories: true)
-        return FontConfig(fontsPath: fontsPath, fontProvider: .coreText)
-    }()
-
-    final class Coordinator: NSObject {
-        private weak var controller: AVPlayerViewController?
-        private var audioStreams: [MediaStream] = []
-        private var currentAudioIndex: Int?
-        private var subtitleStreams: [MediaStream] = []
-        private var currentSubtitleIndex: Int?
-        private var isTranscoded = false
-        private var onAudioTrackSelected: ((Int, TimeInterval) -> Void)?
-        private var onSubtitleTrackSelected: ((MediaStream?) -> Void)?
-
-        private var statusObservation: NSKeyValueObservation?
-        private var errorLogObserver: NSObjectProtocol?
-        private var didPlayToEndObserver: NSObjectProtocol?
-
-        private weak var reportedPlayer: AVPlayer?
-        private var progressObserverToken: Any?
-        private var onStopped: ((TimeInterval) -> Void)?
-
-        private var assRenderer: AssSubtitlesRenderer?
-        private var assSubtitlesView: AssSubtitlesView?
-        private var assCancellables = Set<AnyCancellable>()
-        private var loadedAssContent: String?
-        private var assReadyObservation: NSKeyValueObservation?
-
-        private enum SkipSegmentKind {
-            case intro
-            case outro
-
-            var title: String {
-                switch self {
-                case .intro: return i18n.t("player:skipIntro")
-                case .outro: return i18n.t("player:skipOutro")
-                }
-            }
-        }
-
-        private var introRange: ClosedRange<TimeInterval>?
-        private var outroRange: ClosedRange<TimeInterval>?
-        private weak var introObservedPlayer: AVPlayer?
-        private var introTimeObserverToken: Any?
-        private var visibleSkipSegment: SkipSegmentKind?
-
-        func observe(_ item: AVPlayerItem, onPlaybackEnded: @escaping () -> Void) {
-            statusObservation = item.observe(\.status, options: [.new]) { item, _ in
-                guard item.status == .failed else { return }
-                print("Pelagica playback: AVPlayerItem failed: \(item.error?.localizedDescription ?? "unknown") \(String(describing: item.error))")
-            }
-
-            errorLogObserver = NotificationCenter.default.addObserver(
-                forName: AVPlayerItem.newErrorLogEntryNotification,
-                object: item,
-                queue: .main
-            ) { notification in
-                guard
-                    let item = notification.object as? AVPlayerItem,
-                    let entry = item.errorLog()?.events.last
-                else { return }
-                print("""
-                Pelagica playback: HLS error log — status: \(entry.errorStatusCode), \
-                domain: \(entry.errorDomain), comment: \(entry.errorComment ?? "nil"), \
-                uri: \(entry.uri ?? "nil")
-                """)
-            }
-
-            didPlayToEndObserver = NotificationCenter.default.addObserver(
-                forName: AVPlayerItem.didPlayToEndTimeNotification,
-                object: item,
-                queue: .main
-            ) { _ in
-                onPlaybackEnded()
-            }
-        }
-
-        // MARK: Playback reporting
-
-        func configureReporting(onProgress: @escaping (TimeInterval, Bool) -> Void, onStopped: @escaping (TimeInterval) -> Void, player: AVPlayer) {
-            self.onStopped = onStopped
-            reportedPlayer = player
-            guard progressObserverToken == nil else { return }
-            let interval = CMTime(seconds: 10, preferredTimescale: 1)
-            progressObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak player] time in
-                guard let player else { return }
-                onProgress(time.seconds, player.rate == 0)
-            }
-        }
-
-        // MARK: Subtitle rendering (ASS, via libass)
-
-        func attachAssSubtitles(to controller: AVPlayerViewController, fontConfig: FontConfig) {
-            guard assRenderer == nil else { return }
-            let renderer = AssSubtitlesRenderer(fontConfig: fontConfig)
-            let view = AssSubtitlesView(renderer: renderer)
-            assRenderer = renderer
-            assSubtitlesView = view
-
-            guard let item = controller.player?.currentItem else { return }
-            if item.status == .readyToPlay {
-                attachAssSubtitlesView(view, to: controller)
-            } else {
-                assReadyObservation = item.observe(\.status, options: [.new]) { [weak self, weak controller] item, _ in
-                    guard item.status == .readyToPlay, let self, let controller else { return }
-                    DispatchQueue.main.async {
-                        guard let view = self.assSubtitlesView else { return }
-                        self.attachAssSubtitlesView(view, to: controller)
-                        self.assReadyObservation = nil
-                    }
-                }
-            }
-        }
-
-        private func attachAssSubtitlesView(_ view: AssSubtitlesView, to controller: AVPlayerViewController) {
-            view.attach(
-                to: controller,
-                updateInterval: CMTime(value: 1, timescale: 25),
-                storeCancellable: { [weak self] in self?.assCancellables.insert($0) }
-            )
-        }
-
-        func updateAssSubtitleContent(_ content: String?) {
-            guard content != loadedAssContent else { return }
-            loadedAssContent = content
-            if let content {
-                assRenderer?.loadTrack(content: content)
-            } else {
-                assRenderer?.freeTrack()
-            }
-        }
-
-        func reportStopped() {
-            if let seconds = reportedPlayer?.currentTime().seconds, seconds.isFinite {
-                onStopped?(seconds)
-            }
-            if let progressObserverToken, let reportedPlayer {
-                reportedPlayer.removeTimeObserver(progressObserverToken)
-            }
-            progressObserverToken = nil
-            removeIntroObserver()
-        }
-
-        // MARK: Intro / outro skip
-
-        func configureSkippableSegments(
-            intro: ClosedRange<TimeInterval>?,
-            outro: ClosedRange<TimeInterval>?,
-            controller: AVPlayerViewController
-        ) {
-            self.controller = controller
-            guard introRange != intro || outroRange != outro else { return }
-            introRange = intro
-            outroRange = outro
-            removeIntroObserver()
-
-            guard (intro != nil || outro != nil), let player = controller.player else {
-                controller.contextualActions = []
-                return
-            }
-
-            introObservedPlayer = player
-            let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
-            introTimeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
-                self?.updateSkipActionVisibility(currentSeconds: time.seconds, intro: intro, outro: outro)
-            }
-        }
-
-        private func updateSkipActionVisibility(currentSeconds: Double, intro: ClosedRange<TimeInterval>?, outro: ClosedRange<TimeInterval>?) {
-            guard let controller else { return }
-
-            let active: (kind: SkipSegmentKind, seekTo: TimeInterval)?
-            if let intro, intro.contains(currentSeconds) {
-                active = (.intro, intro.upperBound)
-            } else if let outro, outro.contains(currentSeconds) {
-                active = (.outro, outro.upperBound)
-            } else {
-                active = nil
-            }
-
-            guard active?.kind != visibleSkipSegment else { return }
-            visibleSkipSegment = active?.kind
-            controller.contextualActions = active.map { [makeSkipAction(kind: $0.kind, seekingTo: $0.seekTo)] } ?? []
-        }
-
-        private func makeSkipAction(kind: SkipSegmentKind, seekingTo seconds: TimeInterval) -> UIAction {
-            UIAction(title: kind.title, image: UIImage(systemName: "forward.fill")) { [weak self] _ in
-                guard let self else { return }
-                self.controller?.player?.seek(to: CMTime(seconds: seconds, preferredTimescale: 600))
-                self.visibleSkipSegment = nil
-                self.controller?.contextualActions = []
-            }
-        }
-
-        private func removeIntroObserver() {
-            if let introTimeObserverToken, let introObservedPlayer {
-                introObservedPlayer.removeTimeObserver(introTimeObserverToken)
-            }
-            introTimeObserverToken = nil
-            introObservedPlayer = nil
-            visibleSkipSegment = nil
-        }
-
-        // MARK: Audio & subtitle track menus
-
-        func configureTrackMenus(
-            audioStreams: [MediaStream],
-            selectedAudioIndex: Int?,
-            subtitleStreams: [MediaStream],
-            selectedSubtitleIndex: Int?,
-            isTranscoded: Bool,
-            onAudioTrackSelected: @escaping (Int, TimeInterval) -> Void,
-            onSubtitleTrackSelected: @escaping (MediaStream?) -> Void,
-            controller: AVPlayerViewController
-        ) {
-            self.audioStreams = audioStreams
-            if currentAudioIndex == nil {
-                currentAudioIndex = selectedAudioIndex
-            }
-            self.subtitleStreams = subtitleStreams
-            currentSubtitleIndex = selectedSubtitleIndex
-            self.isTranscoded = isTranscoded
-            self.onAudioTrackSelected = onAudioTrackSelected
-            self.onSubtitleTrackSelected = onSubtitleTrackSelected
-            self.controller = controller
-            rebuildTrackMenus()
-        }
-
-        private func rebuildTrackMenus() {
-            guard let controller else { return }
-            var menus: [UIMenu] = []
-
-            if audioStreams.count > 1 {
-                let actions = audioStreams.map { stream in
-                    UIAction(
-                        title: stream.displayTitle ?? stream.language ?? "\(i18n.t("item:audio")) \(stream.index ?? 0)",
-                        state: stream.index == currentAudioIndex ? .on : .off
-                    ) { [weak self] _ in
-                        self?.selectAudioTrack(stream)
-                    }
-                }
-                menus.append(UIMenu(title: i18n.t("player:audioTracks"), image: UIImage(systemName: "music.note.list"), children: actions))
-            }
-
-            if !subtitleStreams.isEmpty {
-                let offAction = UIAction(title: i18n.t("player:off"), state: currentSubtitleIndex == nil ? .on : .off) { [weak self] _ in
-                    self?.selectSubtitleTrack(nil)
-                }
-                let trackActions = subtitleStreams.map { stream in
-                    UIAction(
-                        title: stream.displayTitle ?? stream.language ?? "\(i18n.t("item:subtitle")) \(stream.index ?? 0)",
-                        state: stream.index == currentSubtitleIndex ? .on : .off
-                    ) { [weak self] _ in
-                        self?.selectSubtitleTrack(stream)
-                    }
-                }
-                menus.append(UIMenu(title: i18n.t("subtitles"), image: UIImage(systemName: "captions.bubble"), children: [offAction] + trackActions))
-            }
-
-            controller.transportBarCustomMenuItems = menus
-        }
-
-        private func selectAudioTrack(_ stream: MediaStream) {
-            print("""
-            Pelagica playback: tapped audio track index \(stream.index.map(String.init) ?? "nil") \
-            (\(stream.displayTitle ?? stream.language ?? "?")), current was \(currentAudioIndex.map(String.init) ?? "nil"), \
-            isTranscoded: \(isTranscoded)
-            """)
-            guard let index = stream.index, index != currentAudioIndex else {
-                print("Pelagica playback: selectAudioTrack bailed early (no index or already selected)")
-                return
-            }
-            currentAudioIndex = index
-
-            if isTranscoded {
-                let seconds = controller?.player?.currentTime().seconds ?? 0
-                onAudioTrackSelected?(index, seconds.isFinite ? seconds : 0)
-            } else {
-                selectDirectPlayAudioTrack(index: index)
-            }
-            rebuildTrackMenus()
-        }
-
-        private func selectDirectPlayAudioTrack(index: Int) {
-            guard let asset = controller?.player?.currentItem?.asset else { return }
-            let streams = audioStreams
-            Task { [weak self] in
-                guard let group = try? await asset.loadMediaSelectionGroup(for: .audible) else { return }
-
-                let position = streams.firstIndex { $0.index == index } ?? 0
-                guard position < group.options.count else { return }
-                let option = group.options[position]
-
-                await MainActor.run {
-                    self?.controller?.player?.currentItem?.select(option, in: group)
-                }
-            }
-        }
-
-        private func selectSubtitleTrack(_ stream: MediaStream?) {
-            guard stream?.index != currentSubtitleIndex else { return }
-            currentSubtitleIndex = stream?.index
-            onSubtitleTrackSelected?(stream)
-            rebuildTrackMenus()
-        }
-    }
+    func updateUIView(_ uiView: UIView, context: Context) {}
 }

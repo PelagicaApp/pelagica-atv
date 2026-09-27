@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		3D72E953304D968900733911 /* JellyfinAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 3D72E952304D968900733911 /* JellyfinAPI */; };
-		3DDCF42E3057026D00AD144C /* SwiftAssRenderer in Frameworks */ = {isa = PBXBuildFile; productRef = ADEC04E562074E819CB77DCD /* SwiftAssRenderer */; };
+		3DDCF42E3057026D00AD144C /* VLCKitSPM in Frameworks */ = {isa = PBXBuildFile; productRef = ADEC04E562074E819CB77DCD /* VLCKitSPM */; };
 		5E1A7C0330B2F00100A1B2C3 /* PelagicaI18n in Frameworks */ = {isa = PBXBuildFile; productRef = 5E1A7C0230B2F00100A1B2C3 /* PelagicaI18n */; };
 /* End PBXBuildFile section */
 
@@ -29,7 +29,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3DDCF42E3057026D00AD144C /* SwiftAssRenderer in Frameworks */,
+				3DDCF42E3057026D00AD144C /* VLCKitSPM in Frameworks */,
 				3D72E953304D968900733911 /* JellyfinAPI in Frameworks */,
 				5E1A7C0330B2F00100A1B2C3 /* PelagicaI18n in Frameworks */,
 			);
@@ -75,7 +75,7 @@
 			name = Pelagica;
 			packageProductDependencies = (
 				3D72E952304D968900733911 /* JellyfinAPI */,
-				ADEC04E562074E819CB77DCD /* SwiftAssRenderer */,
+				ADEC04E562074E819CB77DCD /* VLCKitSPM */,
 				5E1A7C0230B2F00100A1B2C3 /* PelagicaI18n */,
 			);
 			productName = Pelagica;
@@ -108,7 +108,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				3D72E951304D968900733911 /* XCRemoteSwiftPackageReference "jellyfin-sdk-swift" */,
-				A12597F316C009C158E869A1 /* XCRemoteSwiftPackageReference "swift-ass-renderer" */,
+				A12597F316C009C158E869A1 /* XCRemoteSwiftPackageReference "vlckit-spm" */,
 				5E1A7C0130B2F00100A1B2C3 /* XCRemoteSwiftPackageReference "i18n" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -369,12 +369,12 @@
 				minimumVersion = 1.0.0;
 			};
 		};
-		A12597F316C009C158E869A1 /* XCRemoteSwiftPackageReference "swift-ass-renderer" */ = {
+		A12597F316C009C158E869A1 /* XCRemoteSwiftPackageReference "vlckit-spm" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/mihai8804858/swift-ass-renderer";
+			repositoryURL = "https://github.com/tylerjonesio/vlckit-spm";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.3.1;
+				minimumVersion = 3.6.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -390,10 +390,10 @@
 			package = 5E1A7C0130B2F00100A1B2C3 /* XCRemoteSwiftPackageReference "i18n" */;
 			productName = PelagicaI18n;
 		};
-		ADEC04E562074E819CB77DCD /* SwiftAssRenderer */ = {
+		ADEC04E562074E819CB77DCD /* VLCKitSPM */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = A12597F316C009C158E869A1 /* XCRemoteSwiftPackageReference "swift-ass-renderer" */;
-			productName = SwiftAssRenderer;
+			package = A12597F316C009C158E869A1 /* XCRemoteSwiftPackageReference "vlckit-spm" */;
+			productName = VLCKitSPM;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
