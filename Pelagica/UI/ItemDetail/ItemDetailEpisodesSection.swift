@@ -73,6 +73,7 @@ struct ItemDetailEpisodesSection: View {
             .padding(.horizontal, 90)
         }
         .scrollClipDisabled()
+        .id(selectedSeasonID)
     }
 }
 
