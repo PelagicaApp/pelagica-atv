@@ -86,7 +86,7 @@ struct SettingsView: View {
             Button {
                 appState.switchProfile()
             } label: {
-                Text("Switch Profile")
+                Text(i18n.t("profiles:switch_profile"))
             }
             .buttonStyle(PelagicaButtonStyle(emphasis: .secondary))
             .frame(maxWidth: 320)

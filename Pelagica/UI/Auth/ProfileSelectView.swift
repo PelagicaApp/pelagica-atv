@@ -15,7 +15,7 @@ struct ProfileSelectView: View {
         PelagicaScreen {
             PelagicaHeader()
 
-            Text("Who's watching?")
+            Text(i18n.t("profiles:who_is_watching"))
                 .font(.system(size: 34, weight: .semibold))
                 .foregroundStyle(.white)
 
@@ -62,7 +62,7 @@ struct ProfileSelectView: View {
             do {
                 try await appState.selectProfile(profile)
             } catch {
-                errorMessage = "Couldn't reach \(profile.serverName)."
+                errorMessage = i18n.t("profiles:couldnt_reach_server", ["server": profile.serverName])
             }
         }
     }
@@ -90,7 +90,7 @@ private struct ProfileCard: View {
             }
             .buttonStyle(PelagicaCircleButtonStyle(diameter: 200))
             .contextMenu {
-                Button("Remove Profile", role: .destructive, action: onRemove)
+                Button(i18n.t("profiles:remove_profile"), role: .destructive, action: onRemove)
             }
 
             VStack(spacing: 4) {
@@ -123,7 +123,7 @@ private struct AddProfileCard: View {
             }
             .buttonStyle(PelagicaCircleButtonStyle(diameter: 200))
 
-            Text("Add Profile")
+            Text(i18n.t("profiles:add_profile"))
                 .font(.system(size: 28, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 240)

@@ -43,7 +43,7 @@ struct ServerConnectView: View {
                     Button {
                         appState.cancelAddingProfile()
                     } label: {
-                        Text("Back to profiles")
+                        Text(i18n.t("profiles:back_to_profiles"))
                     }
                     .buttonStyle(PelagicaButtonStyle(emphasis: .plain))
                 }
