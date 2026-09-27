@@ -10,6 +10,7 @@ struct MainView: View {
     @StateObject private var configStore = AppConfigStore()
     @StateObject private var navigationCoordinator = TabNavigationCoordinator()
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage(Translations.languageDefaultsKey) private var languageOverride: String?
 
     var body: some View {
         Group {
@@ -33,6 +34,7 @@ struct MainView: View {
                         .tabItem { Label(i18n.t("settings:title"), systemImage: "gearshape.fill") }
                         .tag(MainTab.settings)
                 }
+                .id(languageOverride)
             }
         }
         .background(Color.black.ignoresSafeArea())

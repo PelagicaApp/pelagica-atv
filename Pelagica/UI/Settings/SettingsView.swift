@@ -4,6 +4,7 @@
 //
 
 import JellyfinAPI
+import PelagicaI18n
 import SwiftUI
 
 struct SettingsView: View {
@@ -26,6 +27,10 @@ struct SettingsView: View {
                 
                 SettingsSection(title: i18n.t("settings:account_section_title")) {
                     profileSection
+                }
+                
+                SettingsSection(title: i18n.t("settings:language_section_title")) {
+                    languageSection
                 }
                 
                 SettingsSection(title: i18n.t("sidebar:app_icon")) {
@@ -103,6 +108,44 @@ struct SettingsView: View {
             tag: tag
         ))
         return client.url(with: request, queryAPIKey: true)
+    }
+    
+    // MARK: - Language section
+    
+    private var languageSection: some View {
+        HStack(spacing: 15) {
+            Text(currentLanguageLabel)
+                .foregroundStyle(.white)
+                .font(.system(size: 28, weight: .semibold))
+            
+            Spacer()
+            
+            Menu {
+                Picker(i18n.t("settings:language_section_title"), selection: languageSelection) {
+                    Text(i18n.t("sidebar:system"))
+                        .tag(String?.none)
+                    ForEach(i18n.supportedLanguages) { language in
+                        Text(language.label)
+                            .tag(Optional(language.code))
+                    }
+                }
+            } label: {
+                Label(i18n.t("sidebar:select_language"), systemImage: "globe")
+            }
+            .frame(maxWidth: 400)
+        }
+    }
+    
+    private var languageSelection: Binding<String?> {
+        Binding(
+            get: { i18n.languageOverride },
+            set: { i18n.setLanguageOverride($0) }
+        )
+    }
+    
+    private var currentLanguageLabel: String {
+        let label = i18n.supportedLanguages.first { $0.code == i18n.language }?.label ?? i18n.language
+        return i18n.languageOverride == nil ? "\(i18n.t("sidebar:system")) (\(label))" : label
     }
     
     // MARK: - App Icon section
