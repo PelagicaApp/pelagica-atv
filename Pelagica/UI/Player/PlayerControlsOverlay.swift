@@ -61,11 +61,22 @@ struct PlayerControlsOverlay: View {
     @State private var activeSkipSegment: ActiveSkipSegment?
     @State private var openPanel: TrackPanel?
     @State private var scrubGeneration = 0
+    @State private var holdDirection: MoveCommandDirection?
 
     private static let jumpSeconds: TimeInterval = 10
     private static let autoHideDelay: Duration = .seconds(5)
     /// How long the scrub position rests before it's committed
     private static let scrubCommitDelay: Duration = .seconds(0.8)
+    private static let holdTickInterval: Duration = .milliseconds(200)
+
+    /// Seconds to move per tick while an arrow is held, speeding up the longer it's held.
+    private static func holdStep(after held: Duration) -> TimeInterval {
+        switch held {
+        case ..<Duration.seconds(1.5): return 10
+        case ..<Duration.seconds(3.5): return 30
+        default: return 60
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -161,6 +172,20 @@ struct PlayerControlsOverlay: View {
             try? await Task.sleep(for: Self.autoHideDelay)
             guard !Task.isCancelled, controller.isPlaying, focusedField == .scrubber, !controller.isScrubbing else { return }
             controlsVisible = false
+        }
+        .background {
+            DirectionalHoldDetector(isEnabled: focusedField == .scrubber) { holdDirection = $0 }
+        }
+        .task(id: holdDirection) {
+            guard let holdDirection else { return }
+            let sign: TimeInterval = holdDirection == .left ? -1 : 1
+            let start = ContinuousClock.now
+            while !Task.isCancelled {
+                controller.scrub(by: sign * Self.holdStep(after: .now - start))
+                scrubGeneration += 1
+                showControls()
+                try? await Task.sleep(for: Self.holdTickInterval)
+            }
         }
         .task(id: scrubGeneration) {
             guard controller.isScrubbing else { return }
