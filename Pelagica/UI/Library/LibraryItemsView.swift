@@ -17,6 +17,7 @@ struct LibraryItemsView: View {
     enum Query {
         case library(id: String?)
         case genre(id: String)
+        case studio(id: String)
     }
 
     init(library: BaseItemDto) {
@@ -29,6 +30,12 @@ struct LibraryItemsView: View {
         title = genre.name
         emptyMessage = "There's nothing in this genre."
         query = .genre(id: genre.id)
+    }
+
+    init(studio: StudioRoute) {
+        title = studio.name
+        emptyMessage = i18n.t("library:no_items_description")
+        query = .studio(id: studio.id)
     }
 
     @State private var items: [BaseItemDto] = []
@@ -177,6 +184,11 @@ struct LibraryItemsView: View {
             parameters.includeItemTypes = [.movie, .series]
             parameters.excludeItemTypes = [.collectionFolder]
             parameters.genreIDs = [id]
+        case .studio(let id):
+            parameters.isRecursive = true
+            parameters.includeItemTypes = [.movie, .series]
+            parameters.excludeItemTypes = [.collectionFolder]
+            parameters.studioIDs = [id]
         }
         do {
             let result = try await client.send(Paths.getItems(parameters: parameters)).value

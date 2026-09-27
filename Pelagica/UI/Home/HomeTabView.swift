@@ -87,6 +87,12 @@ struct HomeTabView: View {
             .navigationDestination(for: GenreRoute.self) { route in
                 LibraryItemsView(genre: route)
             }
+            .navigationDestination(for: StudioRoute.self) { route in
+                LibraryItemsView(studio: route)
+            }
+            .navigationDestination(for: StudiosRoute.self) { _ in
+                StudiosView()
+            }
         }
         .onDisappear { path = NavigationPath() }
         .task { await loadHome() }
@@ -154,6 +160,16 @@ struct HomeTabView: View {
                     HomeGenreCard(genre: genre)
                         .frame(width: 420)
                 }
+            }
+
+        case .studios(let studios):
+            HomeSectionRow(title: row.title) {
+                ForEach(studios) { studio in
+                    HomeStudioCard(studio: studio)
+                        .frame(width: 420)
+                }
+                HomeStudiosMoreCard()
+                    .frame(width: 420)
             }
         }
     }
@@ -300,6 +316,16 @@ struct HomeTabView: View {
             let genres = await fetchGenres(client: client, limit: section.limit.orDefaultLimit(20))
             guard !genres.isEmpty else { return [] }
             return [HomeRow(title: section.title.orDefault(i18n.t("genres")), items: [], kind: .genres(genres))]
+
+        case .studios(let section):
+            guard let userID = appState.currentUser?.id else { return [] }
+            let studios = await StudiosAPI.fetchStudiosByItemCount(client: client, userID: userID)
+            guard !studios.isEmpty else { return [] }
+            return [HomeRow(
+                title: section.title.orDefault(i18n.t("studios")),
+                items: [],
+                kind: .studios(Array(studios.prefix(section.limit.orDefaultLimit(20))))
+            )]
 
         case .mediaBar, .unsupported:
             return []
@@ -540,7 +566,7 @@ struct HomeTabView: View {
 
     nonisolated private static func skeletonKind(for section: HomeScreenSection) -> HomeSlot.SkeletonKind {
         switch section {
-        case .continueWatching, .nextUp, .resume, .libraries, .genres:
+        case .continueWatching, .nextUp, .resume, .libraries, .genres, .studios:
             return .landscape
         case .items(let section):
             return section.useThumbImage == true ? .landscape : .poster
@@ -563,6 +589,8 @@ struct HomeTabView: View {
             return section.title.orDefault(i18n.t("home:libraries"))
         case .genres(let section):
             return section.title.orDefault(i18n.t("genres"))
+        case .studios(let section):
+            return section.title.orDefault(i18n.t("studios"))
         case .recentlyAdded, .mediaBar, .unsupported:
             return nil
         }
@@ -693,6 +721,7 @@ private enum HomeRowKind {
     case continueStyle(titleLine: ContinueWatchingTitleLine?, detailLines: [ContinueWatchingDetailLine]?)
     case library
     case genres([GenreEntry])
+    case studios([StudioEntry])
 }
 
 private struct HomeRow: Identifiable {
@@ -702,8 +731,11 @@ private struct HomeRow: Identifiable {
     let kind: HomeRowKind
 
     var isEmpty: Bool {
-        if case .genres(let genres) = kind { return genres.isEmpty }
-        return items.isEmpty
+        switch kind {
+        case .genres(let genres): return genres.isEmpty
+        case .studios(let studios): return studios.isEmpty
+        default: return items.isEmpty
+        }
     }
 }
 
