@@ -24,7 +24,7 @@ struct ItemDetailView: View {
     @State private var episodes: [BaseItemDto] = []
 
     @State private var playbackTarget: PlaybackTarget?
-    @State private var localTrailer: BaseItemDto?
+    @State private var localTrailers: [BaseItemDto] = []
 
     @Namespace private var heroNamespace
     @Namespace private var seasonsNamespace
@@ -58,6 +58,13 @@ struct ItemDetailView: View {
                             onSelectSeason: { await loadEpisodes(seasonID: $0) }
                         )
                     }
+                    
+                    if localTrailers.count > 1 {
+                        ItemTrailersSection(
+                            trailers: localTrailers,
+                            onPlayTrailer: playLocalTrailer
+                        )
+                    }
 
                     if !collectionItems.isEmpty {
                         ItemDetailCollectionsSection(collectionItems: collectionItems)
@@ -74,7 +81,7 @@ struct ItemDetailView: View {
         .background(PelagicaBackground())
         .task {
             await loadFullItem()
-            await loadLocalTrailer()
+            await loadLocalTrailers()
             await laodSimilarItems()
             if item.type == .series {
                 await loadNextEpisode()
@@ -109,7 +116,7 @@ struct ItemDetailView: View {
             item: item,
             isWatchlist: isWatchlist,
             isTogglingWatchlist: isTogglingWatchlist,
-            trailerAvailable: localTrailer != nil || trailerURL != nil,
+            trailerAvailable: !localTrailers.isEmpty || trailerURL != nil,
             playLabel: playLabel,
             namespace: heroNamespace,
             isPlayButtonFocused: $isPlayButtonFocused,
@@ -140,11 +147,15 @@ struct ItemDetailView: View {
     }
 
     private func playTrailer() {
-        if let localTrailer {
-            startPlayback(for: localTrailer)
+        if !localTrailers.isEmpty, let firstTrailer = localTrailers.first {
+            startPlayback(for: firstTrailer)
         } else if let trailerURL {
             openURL(trailerURL)
         }
+    }
+    
+    private func playLocalTrailer(trailer: BaseItemDto) {
+        startPlayback(for: trailer)
     }
 
     private func startPlayback(for target: BaseItemDto) {
@@ -209,13 +220,13 @@ struct ItemDetailView: View {
         }
     }
 
-    private func loadLocalTrailer() async {
+    private func loadLocalTrailers() async {
         guard let client = appState.client, let id = item.id, (item.localTrailerCount ?? 0) > 0 else { return }
         do {
             let trailers = try await client.send(Paths.getLocalTrailers(itemID: id, userID: appState.currentUser?.id)).value
-            localTrailer = trailers.first
+            localTrailers = trailers
         } catch {
-            localTrailer = nil
+            // Just leave trailers empty
         }
     }
 
