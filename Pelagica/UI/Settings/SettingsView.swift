@@ -11,8 +11,8 @@ struct SettingsView: View {
     @State private var currentIconName: String? = UIApplication.shared.alternateIconName
     
     private let icons: [AppIconOption] = [
-        AppIconOption(name: nil, assetName: "AppIconDefault", label: "Default"),
-        AppIconOption(name: "AppIconPride", assetName: "AppIconPride", label: "Pride"),
+        AppIconOption(name: nil, assetName: "AppIconDefault", label: i18n.t("sidebar:app_icon_classic")),
+        AppIconOption(name: "AppIconPride", assetName: "AppIconPride", label: i18n.t("sidebar:app_icon_pride")),
     ]
     
     var body: some View {
@@ -20,15 +20,15 @@ struct SettingsView: View {
             Color.black.ignoresSafeArea()
             
             VStack(alignment: .leading, spacing: 40) {
-                Text("Settings")
+                Text(i18n.t("settings:title"))
                     .font(.system(size: 40, weight: .bold))
                     .foregroundStyle(.white)
                 
-                SettingsSection(title: "Account") {
+                SettingsSection(title: i18n.t("settings:account_section_title")) {
                     profileSection
                 }
                 
-                SettingsSection(title: "App Icon") {
+                SettingsSection(title: i18n.t("sidebar:app_icon")) {
                     HStack(spacing: 34) {
                         ForEach(icons) { icon in
                             AppIconButton(
@@ -43,7 +43,7 @@ struct SettingsView: View {
                     }
                 }
                 
-                Text("Pelagica for AppleTV \(appVersionString)")
+                Text("\(i18n.t("settings:version_label")) \(appVersionString)")
                     .foregroundStyle(.secondary)
                     .font(.system(size: 18, weight: .semibold))
             }
@@ -66,12 +66,12 @@ struct SettingsView: View {
                 .frame(width: 80, height: 80)
             
             VStack(alignment: .leading, spacing: 5) {
-                Text(appState.currentUser?.name ?? "Unknown")
+                Text(appState.currentUser?.name ?? i18n.t("sidebar:unknown_user"))
                     .foregroundStyle(.white)
                     .font(.system(size: 34, weight: .bold))
                     .lineLimit(1)
                 
-                Text((appState.serverName ?? "Unknown") + " ⋅ " + (appState.client?.configuration.url.absoluteString ?? "Unknown"))
+                Text((appState.serverName ?? i18n.t("player:unknown")) + " ⋅ " + (appState.client?.configuration.url.absoluteString ?? i18n.t("player:unknown")))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -89,7 +89,7 @@ struct SettingsView: View {
             Button {
                 appState.signOut()
             } label: {
-                Text("Sign Out")
+                Text(i18n.t("sidebar:logout"))
             }
             .buttonStyle(PelagicaButtonStyle(emphasis: .secondary))
             .frame(maxWidth: 250)

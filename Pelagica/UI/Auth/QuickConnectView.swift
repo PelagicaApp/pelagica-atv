@@ -41,7 +41,7 @@ struct QuickConnectView: View {
                             .font(.system(size: 64, weight: .bold, design: .monospaced))
                             .tracking(20)
                             .foregroundStyle(.white)
-                        Text("Scan this QR code and authorize or go to \(server.url) on your phone or computer, sign in, and enter this code manually.")
+                        Text(i18n.t("login:quick_connect_qr_instructions", ["server": server.url.absoluteString]))
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                             .font(.system(size: 24))
@@ -51,7 +51,7 @@ struct QuickConnectView: View {
                     pollingTask?.cancel()
                     path.removeLast()
                 } label: {
-                    Text("Back")
+                    Text(i18n.t("back"))
                 }
                 .buttonStyle(PelagicaButtonStyle(emphasis: .secondary))
             }
@@ -77,13 +77,13 @@ struct QuickConnectView: View {
         do {
             let result = try await appState.initiateQuickConnect(server: server)
             guard let result else {
-                errorMessage = "Couldn't initiate quick connect."
+                errorMessage = i18n.t("login:quick_connect_failed")
                 return
             }
             code = result.code
             startPolling(secret: result.secret)
         } catch {
-            errorMessage = "Couldn't initiate quick connect."
+            errorMessage = i18n.t("login:quick_connect_failed")
         }
     }
     
@@ -101,7 +101,7 @@ struct QuickConnectView: View {
                         return
                     }
                 } catch {
-                    errorMessage = "Lost connection while checking status."
+                    errorMessage = i18n.t("login:quick_connect_failed")
                     return
                 }
             }

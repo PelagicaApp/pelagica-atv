@@ -20,13 +20,13 @@ struct LoginView: View {
             PelagicaHeader()
 
             VStack(alignment: .leading, spacing: 20) {
-                PelagicaField(placeholder: "Username", text: $username, label: "Username", contentType: .username)
-                PelagicaField(placeholder: "Password", text: $password, isSecure: true, label: "Password", contentType: .password, onCommit: signIn)
+                PelagicaField(placeholder: i18n.t("login:username"), text: $username, label: i18n.t("login:username"), contentType: .username)
+                PelagicaField(placeholder: i18n.t("login:password"), text: $password, isSecure: true, label: i18n.t("login:password"), contentType: .password, onCommit: signIn)
 
                 Button {
                     signIn()
                 } label: {
-                    Text(isLoggingIn ? "Signing in…" : "Login")
+                    Text(isLoggingIn ? i18n.t("login:logging_in") : i18n.t("login:login"))
                 }
                 .buttonStyle(PelagicaButtonStyle(emphasis: .primary))
                 .disabled(username.isEmpty || isLoggingIn)
@@ -40,7 +40,7 @@ struct LoginView: View {
                 Button {
                     path.removeLast()
                 } label: {
-                    Text("Back")
+                    Text(i18n.t("back"))
                 }
                 .buttonStyle(PelagicaButtonStyle(emphasis: .plain))
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -58,7 +58,7 @@ struct LoginView: View {
             do {
                 try await appState.signIn(server: server, username: username, password: password)
             } catch {
-                errorMessage = "Incorrect username or password."
+                errorMessage = i18n.t("login:invalid_credentials")
             }
         }
     }

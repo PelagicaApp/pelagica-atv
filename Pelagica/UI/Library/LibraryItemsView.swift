@@ -20,8 +20,8 @@ struct LibraryItemsView: View {
     }
 
     init(library: BaseItemDto) {
-        title = library.name ?? "Library"
-        emptyMessage = "This library doesn't have any items in it."
+        title = library.name ?? i18n.t("item:unknown_library")
+        emptyMessage = i18n.t("library:no_items_description")
         query = .library(id: library.id)
     }
 
@@ -101,20 +101,20 @@ struct LibraryItemsView: View {
 
     private var sortMenu: some View {
         Menu {
-            Picker("Sort By", selection: $sortBy) {
-                Label("Name", systemImage: "textformat").tag(ItemSortBy.name)
-                Label("Random", systemImage: "dice.fill").tag(ItemSortBy.random)
-                Label("Community Rating", systemImage: "star.fill").tag(ItemSortBy.communityRating)
-                Label("Date Added", systemImage: "calendar.badge.plus").tag(ItemSortBy.dateCreated)
-                Label("Release Date", systemImage: "calendar").tag(ItemSortBy.premiereDate)
+            Picker(i18n.t("settings:sort_by"), selection: $sortBy) {
+                Label(i18n.t("library:sort_name"), systemImage: "textformat").tag(ItemSortBy.name)
+                Label(i18n.t("settings:collection_sort_Random"), systemImage: "dice.fill").tag(ItemSortBy.random)
+                Label(i18n.t("library:sort_community_rating"), systemImage: "star.fill").tag(ItemSortBy.communityRating)
+                Label(i18n.t("library:sort_date_added"), systemImage: "calendar.badge.plus").tag(ItemSortBy.dateCreated)
+                Label(i18n.t("item:release_date"), systemImage: "calendar").tag(ItemSortBy.premiereDate)
             }
 
-            Picker("Order", selection: $sortOrder) {
-                Label("Ascending", systemImage: "arrow.up").tag(JellyfinAPI.SortOrder.ascending)
-                Label("Descending", systemImage: "arrow.down").tag(JellyfinAPI.SortOrder.descending)
+            Picker(i18n.t("settings:sort_order"), selection: $sortOrder) {
+                Label(i18n.t("ascending"), systemImage: "arrow.up").tag(JellyfinAPI.SortOrder.ascending)
+                Label(i18n.t("descending"), systemImage: "arrow.down").tag(JellyfinAPI.SortOrder.descending)
             }
         } label: {
-            Label("Sort", systemImage: "arrow.up.arrow.down")
+            Label(i18n.t("settings:sort_by"), systemImage: "arrow.up.arrow.down")
         }
     }
 
@@ -124,7 +124,7 @@ struct LibraryItemsView: View {
                 .font(.system(size: 64))
                 .foregroundStyle(.white.opacity(0.3))
             
-            Text("Nothing here yet")
+            Text(i18n.t("library:no_items_title"))
                 .font(.system(size: 28, weight: .semibold))
                 .foregroundStyle(.white)
             
@@ -135,7 +135,7 @@ struct LibraryItemsView: View {
             Button {
                 dismiss()
             } label: {
-                Text("Go Back")
+                Text(i18n.t("back"))
                     .font(.system(size: 20, weight: .medium))
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)

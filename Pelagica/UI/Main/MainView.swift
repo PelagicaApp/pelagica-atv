@@ -14,23 +14,23 @@ struct MainView: View {
     var body: some View {
         Group {
             if configStore.isLoading {
-                PageLoadingView(text: "Loading...")
+                PageLoadingView(text: i18n.t("loading"))
             } else {
                 TabView(selection: $navigationCoordinator.selectedTab) {
                     HomeTabView()
-                        .tabItem { Label("Home", systemImage: "house.fill") }
+                        .tabItem { Label(i18n.t("home:title"), systemImage: "house.fill") }
                         .tag(MainTab.home)
 
                     LibraryView()
-                        .tabItem { Label("Library", systemImage: "books.vertical.fill") }
+                        .tabItem { Label(i18n.t("library:title"), systemImage: "books.vertical.fill") }
                         .tag(MainTab.library)
 
                     SearchTabView()
-                        .tabItem { Label("Search", systemImage: "magnifyingglass") }
+                        .tabItem { Label(i18n.t("search"), systemImage: "magnifyingglass") }
                         .tag(MainTab.search)
 
                     SettingsView()
-                        .tabItem { Label("Settings", systemImage: "gearshape.fill") }
+                        .tabItem { Label(i18n.t("settings:title"), systemImage: "gearshape.fill") }
                         .tag(MainTab.settings)
                 }
             }

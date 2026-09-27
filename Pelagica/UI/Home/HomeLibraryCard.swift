@@ -41,7 +41,7 @@ struct HomeLibraryCard: View {
             }
             .buttonStyle(.card)
 
-            Text(library.name ?? "Library")
+            Text(library.name ?? i18n.t("item:unknown_library"))
                 .font(.system(size: 20, weight: .medium))
                 .foregroundStyle(.white)
                 .lineLimit(1)

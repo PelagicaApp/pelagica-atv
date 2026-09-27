@@ -17,7 +17,7 @@ struct ItemDetailEpisodesSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            Text("Episodes")
+            Text(i18n.t("item:episodes"))
                 .font(.system(size: 34, weight: .bold))
                 .foregroundStyle(.white)
                 .padding(.leading, 90)
@@ -45,7 +45,7 @@ struct ItemDetailEpisodesSection: View {
                     Button {
                         selectedSeasonID = season.id
                     } label: {
-                        Text(season.name ?? "Season")
+                        Text(season.name ?? i18n.t("settings:season"))
                     }
                     .buttonStyle(SeasonPillButtonStyle(isSelected: season.id == selectedSeasonID))
                     .prefersDefaultFocus(season.id == seasons.first?.id, in: seasonsNamespace)
@@ -139,7 +139,7 @@ private struct EpisodeCard: View {
 
     private var episodeTitle: String {
         let number = episode.indexNumber.map { "\($0). " } ?? ""
-        return number + (episode.name ?? "Untitled")
+        return number + (episode.name ?? i18n.t("no_title"))
     }
 
     private var thumbnailHeight: CGFloat { cardWidth * 9.0 / 16.0 }
@@ -211,7 +211,7 @@ private struct EpisodeCard: View {
     private var metadataRow: some View {
         HStack(spacing: 12) {
             if let season = episode.parentIndexNumber, let number = episode.indexNumber {
-                Text("S\(season) E\(number)")
+                Text(i18n.t("item:season_episode", ["season": season, "episode": number]))
             }
 
             if let rating = episode.communityRating {

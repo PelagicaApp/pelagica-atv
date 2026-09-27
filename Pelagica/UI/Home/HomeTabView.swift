@@ -214,7 +214,7 @@ struct HomeTabView: View {
         case .continueWatching(let section):
             let items = await fetchContinueWatching(client: client, limit: section.limit.orDefaultLimit(20))
             return [HomeRow(
-                title: section.title.orDefault("Continue Watching"),
+                title: section.title.orDefault(i18n.t("home:continue_watching")),
                 items: items,
                 kind: .continueStyle(titleLine: section.titleLine, detailLines: section.detailLine)
             )]
@@ -222,7 +222,7 @@ struct HomeTabView: View {
         case .nextUp(let section):
             let items = await fetchNextUp(client: client, limit: section.limit.orDefaultLimit(20))
             return [HomeRow(
-                title: section.title.orDefault("Next Up"),
+                title: section.title.orDefault(i18n.t("home:next_up")),
                 items: items,
                 kind: .continueStyle(titleLine: section.titleLine, detailLines: section.detailLine)
             )]
@@ -230,7 +230,7 @@ struct HomeTabView: View {
         case .resume(let section):
             let items = await fetchResume(client: client, limit: section.limit.orDefaultLimit(20))
             return [HomeRow(
-                title: section.title.orDefault("Resume"),
+                title: section.title.orDefault(i18n.t("resume")),
                 items: items,
                 kind: .continueStyle(titleLine: section.titleLine, detailLines: section.detailLine)
             )]
@@ -251,12 +251,12 @@ struct HomeTabView: View {
         case .libraries(let section):
             let items = await fetchLibraries(client: client)
             guard !items.isEmpty else { return [] }
-            return [HomeRow(title: section.title.orDefault("Libraries"), items: items, kind: .library)]
+            return [HomeRow(title: section.title.orDefault(i18n.t("home:libraries")), items: items, kind: .library)]
 
         case .genres(let section):
             let genres = await fetchGenres(client: client, limit: section.limit.orDefaultLimit(20))
             guard !genres.isEmpty else { return [] }
-            return [HomeRow(title: section.title.orDefault("Genres"), items: [], kind: .genres(genres))]
+            return [HomeRow(title: section.title.orDefault(i18n.t("genres")), items: [], kind: .genres(genres))]
 
         case .mediaBar, .unsupported:
             return []
@@ -480,7 +480,7 @@ struct HomeTabView: View {
                             enableUserData: true
                         ))).value
                         guard let items = result.items, !items.isEmpty else { return (index, nil) }
-                        return (index, HomeRow(title: "Recently Added in \(name)", items: items, kind: .poster(detailText: Self.defaultDetailText, useThumb: false)))
+                        return (index, HomeRow(title: i18n.t("home:recently_added", ["category": name]), items: items, kind: .poster(detailText: Self.defaultDetailText, useThumb: false)))
                     } catch {
                         return (index, nil)
                     }
@@ -509,17 +509,17 @@ struct HomeTabView: View {
     nonisolated private static func placeholderTitle(for section: HomeScreenSection) -> String? {
         switch section {
         case .continueWatching(let section):
-            return section.title.orDefault("Continue Watching")
+            return section.title.orDefault(i18n.t("home:continue_watching"))
         case .nextUp(let section):
-            return section.title.orDefault("Next Up")
+            return section.title.orDefault(i18n.t("home:next_up"))
         case .resume(let section):
-            return section.title.orDefault("Resume")
+            return section.title.orDefault(i18n.t("resume"))
         case .items(let section):
             return section.title ?? ""
         case .libraries(let section):
-            return section.title.orDefault("Libraries")
+            return section.title.orDefault(i18n.t("home:libraries"))
         case .genres(let section):
-            return section.title.orDefault("Genres")
+            return section.title.orDefault(i18n.t("genres"))
         case .recentlyAdded, .mediaBar, .unsupported:
             return nil
         }
@@ -532,12 +532,12 @@ struct HomeTabView: View {
     }
 
     nonisolated static func titleLineText(for item: BaseItemDto, titleLine: ContinueWatchingTitleLine?) -> String {
-        let fallbackName = item.name ?? item.seriesName ?? "Untitled"
+        let fallbackName = item.name ?? item.seriesName ?? i18n.t("no_title")
         switch titleLine ?? .itemTitleWithEpisodeInfo {
         case .itemTitle:
-            return item.name ?? "Untitled"
+            return item.name ?? i18n.t("no_title")
         case .parentTitle:
-            return item.seriesName ?? item.name ?? "Untitled"
+            return item.seriesName ?? item.name ?? i18n.t("no_title")
         case .itemTitleWithEpisodeInfo:
             if item.seriesID != nil, let season = item.parentIndexNumber, let episode = item.indexNumber {
                 return "S\(season):E\(episode) - \(fallbackName)"
@@ -553,11 +553,11 @@ struct HomeTabView: View {
             case .progressPercentage:
                 guard let runtime = item.runTimeTicks, runtime > 0 else { return nil }
                 let watched = item.userData?.playbackPositionTicks ?? 0
-                return "\(Int(Double(watched) / Double(runtime) * 100))% watched"
+                return i18n.t("home:progress_watched", ["percent": Int(Double(watched) / Double(runtime) * 100)])
             case .timeRemaining:
                 guard let runtime = item.runTimeTicks, runtime > 0 else { return nil }
                 let watched = item.userData?.playbackPositionTicks ?? 0
-                return "\(readableTime(ticks: max(runtime - watched, 0))) left"
+                return i18n.t("home:time_remaining", ["time": readableTime(ticks: max(runtime - watched, 0))])
             case .endsAt:
                 guard let runtime = item.runTimeTicks, runtime > 0 else { return nil }
                 let watched = item.userData?.playbackPositionTicks ?? 0
@@ -565,7 +565,7 @@ struct HomeTabView: View {
                 let endsAt = Date().addingTimeInterval(remainingSeconds)
                 let formatter = DateFormatter()
                 formatter.timeStyle = .short
-                return "Ends at \(formatter.string(from: endsAt))"
+                return i18n.t("ends_at", ["date": formatter.string(from: endsAt)])
             case .episodeInfo:
                 guard let season = item.parentIndexNumber, let episode = item.indexNumber else { return nil }
                 return "S\(season):E\(episode)"
@@ -587,7 +587,7 @@ struct HomeTabView: View {
             case .releaseYearAndMonth, .releaseDate:
                 guard let date = item.premiereDate else { return nil }
                 let formatter = DateFormatter()
-                formatter.dateFormat = field == .releaseDate ? "MMMM d, yyyy" : "MMMM yyyy"
+                formatter.setLocalizedDateFormatFromTemplate(field == .releaseDate ? "MMMMdyyyy" : "MMMMyyyy")
                 return formatter.string(from: date)
             case .communityRating:
                 return item.communityRating.map { String(format: "★ %.1f", $0) }
@@ -598,17 +598,17 @@ struct HomeTabView: View {
                 let endsAt = Date().addingTimeInterval(Double(runtime) / 10_000_000)
                 let formatter = DateFormatter()
                 formatter.timeStyle = .short
-                return "Ends at \(formatter.string(from: endsAt))"
+                return i18n.t("ends_at", ["date": formatter.string(from: endsAt)])
             case .seasonCount:
-                return item.childCount.map { $0 == 1 ? "1 Season" : "\($0) Seasons" }
+                return item.childCount.map { i18n.t("season_count", count: $0) }
             case .episodeCount:
-                return item.recursiveItemCount.map { $0 == 1 ? "1 Episode" : "\($0) Episodes" }
+                return item.recursiveItemCount.map { i18n.t("episode_count", count: $0) }
             case .ageRating:
                 return item.officialRating
             case .artist:
                 return item.albumArtist
             case .trackCount:
-                return item.childCount.map { $0 == 1 ? "1 Track" : "\($0) Tracks" }
+                return item.childCount.map { i18n.t("home:track_count", count: $0) }
             }
         }
         return parts.joined(separator: " • ")

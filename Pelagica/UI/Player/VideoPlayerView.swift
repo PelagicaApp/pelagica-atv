@@ -77,10 +77,10 @@ struct VideoPlayerView: View {
                 .ignoresSafeArea()
             } else if didFailToResolve {
                 VStack(spacing: 24) {
-                    Text("Couldn't play this item")
+                    Text(i18n.t("player:playbackDecodeErrorFailed"))
                         .font(.title2)
                         .foregroundStyle(.white)
-                    Button("Close") { dismiss() }
+                    Button(i18n.t("close")) { dismiss() }
                 }
             } else {
                 ProgressView()
@@ -581,8 +581,8 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
 
             var title: String {
                 switch self {
-                case .intro: return "Skip Intro"
-                case .outro: return "Skip Outro"
+                case .intro: return i18n.t("player:skipIntro")
+                case .outro: return i18n.t("player:skipOutro")
                 }
             }
         }
@@ -782,28 +782,28 @@ private struct AVPlayerControllerView: UIViewControllerRepresentable {
             if audioStreams.count > 1 {
                 let actions = audioStreams.map { stream in
                     UIAction(
-                        title: stream.displayTitle ?? stream.language ?? "Track \(stream.index ?? 0)",
+                        title: stream.displayTitle ?? stream.language ?? "\(i18n.t("item:audio")) \(stream.index ?? 0)",
                         state: stream.index == currentAudioIndex ? .on : .off
                     ) { [weak self] _ in
                         self?.selectAudioTrack(stream)
                     }
                 }
-                menus.append(UIMenu(title: "Audio", image: UIImage(systemName: "music.note.list"), children: actions))
+                menus.append(UIMenu(title: i18n.t("player:audioTracks"), image: UIImage(systemName: "music.note.list"), children: actions))
             }
 
             if !subtitleStreams.isEmpty {
-                let offAction = UIAction(title: "Off", state: currentSubtitleIndex == nil ? .on : .off) { [weak self] _ in
+                let offAction = UIAction(title: i18n.t("player:off"), state: currentSubtitleIndex == nil ? .on : .off) { [weak self] _ in
                     self?.selectSubtitleTrack(nil)
                 }
                 let trackActions = subtitleStreams.map { stream in
                     UIAction(
-                        title: stream.displayTitle ?? stream.language ?? "Subtitle \(stream.index ?? 0)",
+                        title: stream.displayTitle ?? stream.language ?? "\(i18n.t("item:subtitle")) \(stream.index ?? 0)",
                         state: stream.index == currentSubtitleIndex ? .on : .off
                     ) { [weak self] _ in
                         self?.selectSubtitleTrack(stream)
                     }
                 }
-                menus.append(UIMenu(title: "Subtitles", image: UIImage(systemName: "captions.bubble"), children: [offAction] + trackActions))
+                menus.append(UIMenu(title: i18n.t("subtitles"), image: UIImage(systemName: "captions.bubble"), children: [offAction] + trackActions))
             }
 
             controller.transportBarCustomMenuItems = menus

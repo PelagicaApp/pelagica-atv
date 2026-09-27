@@ -37,7 +37,7 @@ struct ItemCard: View {
             .buttonStyle(.card)
             
             VStack(alignment: .leading, spacing: 10) {
-                Text(item.name ?? "Untitled")
+                Text(item.name ?? i18n.t("no_title"))
                     .font(.system(size: 20, weight: .medium))
                     .foregroundStyle(.white)
                     .lineLimit(1)

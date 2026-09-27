@@ -28,13 +28,13 @@ enum DetailBadges {
         case .releaseYearAndMonth:
             guard let date = item.premiereDate else { return nil }
             let formatter = DateFormatter()
-            formatter.dateFormat = "MMMM yyyy"
+            formatter.setLocalizedDateFormatFromTemplate("MMMMyyyy")
             return DetailBadgeValue(text: formatter.string(from: date))
 
         case .releaseDate:
             guard let date = item.premiereDate else { return nil }
             let formatter = DateFormatter()
-            formatter.dateFormat = "MMMM d, yyyy"
+            formatter.setLocalizedDateFormatFromTemplate("MMMMdyyyy")
             return DetailBadgeValue(text: formatter.string(from: date))
 
         case .communityRating:
@@ -54,15 +54,15 @@ enum DetailBadges {
             let endsAt = Date().addingTimeInterval(Double(ticks) / 10_000_000)
             let formatter = DateFormatter()
             formatter.timeStyle = .short
-            return DetailBadgeValue(text: "Ends at \(formatter.string(from: endsAt))")
+            return DetailBadgeValue(text: i18n.t("ends_at", ["date": formatter.string(from: endsAt)]))
 
         case .seasonCount:
             guard let count = item.childCount else { return nil }
-            return DetailBadgeValue(text: count == 1 ? "1 Season" : "\(count) Seasons")
+            return DetailBadgeValue(text: i18n.t("season_count", count: count))
 
         case .episodeCount:
             guard let count = item.recursiveItemCount else { return nil }
-            return DetailBadgeValue(text: count == 1 ? "1 Episode" : "\(count) Episodes")
+            return DetailBadgeValue(text: i18n.t("episode_count", count: count))
 
         case .ageRating:
             guard let rating = item.officialRating else { return nil }
@@ -70,7 +70,7 @@ enum DetailBadges {
 
         case .episodeNumber:
             guard let season = item.parentIndexNumber, let episode = item.indexNumber else { return nil }
-            return DetailBadgeValue(text: "S\(season) E\(episode)")
+            return DetailBadgeValue(text: i18n.t("item:season_episode", ["season": season, "episode": episode]))
 
         case .videoQuality:
             guard let streams = item.mediaStreams else { return nil }
@@ -92,7 +92,7 @@ enum DetailBadges {
         let videoStream = streams
             .filter { $0.type == .video }
             .max { ($0.height ?? 0) < ($1.height ?? 0) }
-        guard let height = videoStream?.height, height > 0 else { return "Unknown" }
+        guard let height = videoStream?.height, height > 0 else { return i18n.t("player:unknown") }
 
         switch height {
         case 2160...: return "4K"

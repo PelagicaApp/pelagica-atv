@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		3D72E953304D968900733911 /* JellyfinAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 3D72E952304D968900733911 /* JellyfinAPI */; };
 		3DDCF42E3057026D00AD144C /* SwiftAssRenderer in Frameworks */ = {isa = PBXBuildFile; productRef = ADEC04E562074E819CB77DCD /* SwiftAssRenderer */; };
+		5E1A7C0330B2F00100A1B2C3 /* PelagicaI18n in Frameworks */ = {isa = PBXBuildFile; productRef = 5E1A7C0230B2F00100A1B2C3 /* PelagicaI18n */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +31,7 @@
 			files = (
 				3DDCF42E3057026D00AD144C /* SwiftAssRenderer in Frameworks */,
 				3D72E953304D968900733911 /* JellyfinAPI in Frameworks */,
+				5E1A7C0330B2F00100A1B2C3 /* PelagicaI18n in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -74,6 +76,7 @@
 			packageProductDependencies = (
 				3D72E952304D968900733911 /* JellyfinAPI */,
 				ADEC04E562074E819CB77DCD /* SwiftAssRenderer */,
+				5E1A7C0230B2F00100A1B2C3 /* PelagicaI18n */,
 			);
 			productName = Pelagica;
 			productReference = 3D72E93D304D940200733911 /* Pelagica.app */;
@@ -106,6 +109,7 @@
 			packageReferences = (
 				3D72E951304D968900733911 /* XCRemoteSwiftPackageReference "jellyfin-sdk-swift" */,
 				A12597F316C009C158E869A1 /* XCRemoteSwiftPackageReference "swift-ass-renderer" */,
+				5E1A7C0130B2F00100A1B2C3 /* XCRemoteSwiftPackageReference "i18n" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3D72E93E304D940200733911 /* Products */;
@@ -357,6 +361,14 @@
 				minimumVersion = 3.1.0;
 			};
 		};
+		5E1A7C0130B2F00100A1B2C3 /* XCRemoteSwiftPackageReference "i18n" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PelagicaApp/i18n";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
 		A12597F316C009C158E869A1 /* XCRemoteSwiftPackageReference "swift-ass-renderer" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/mihai8804858/swift-ass-renderer";
@@ -372,6 +384,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3D72E951304D968900733911 /* XCRemoteSwiftPackageReference "jellyfin-sdk-swift" */;
 			productName = JellyfinAPI;
+		};
+		5E1A7C0230B2F00100A1B2C3 /* PelagicaI18n */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5E1A7C0130B2F00100A1B2C3 /* XCRemoteSwiftPackageReference "i18n" */;
+			productName = PelagicaI18n;
 		};
 		ADEC04E562074E819CB77DCD /* SwiftAssRenderer */ = {
 			isa = XCSwiftPackageProductDependency;

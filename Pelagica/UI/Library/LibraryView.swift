@@ -26,7 +26,7 @@ struct LibraryView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 32) {
-                        Text("Libraries")
+                        Text(i18n.t("home:libraries"))
                             .font(.system(size: 40, weight: .bold))
                             .foregroundStyle(.white)
 
@@ -108,7 +108,7 @@ private struct LibraryCard: View {
             }
             .buttonStyle(.card)
             
-            Text(library.name ?? "Library")
+            Text(library.name ?? i18n.t("item:unknown_library"))
                 .font(.system(size: 24, weight: .medium))
                 .foregroundStyle(.white)
                 .lineLimit(1)

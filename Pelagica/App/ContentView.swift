@@ -11,7 +11,7 @@ struct ContentView: View {
     var body: some View {
         Group {
             if appState.isRestoringSession {
-                PageLoadingView(text: "Restoring session...")
+                PageLoadingView(text: i18n.t("loading"))
             } else if appState.isLoggedIn {
                 MainView()
             } else if appState.showsProfilePicker {

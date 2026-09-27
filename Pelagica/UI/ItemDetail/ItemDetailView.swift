@@ -120,14 +120,14 @@ struct ItemDetailView: View {
 
     private var playLabel: String {
         if item.type == .series {
-            guard let nextEpisode else { return "Play" }
+            guard let nextEpisode else { return i18n.t("item:play") }
             let season = nextEpisode.parentIndexNumber ?? 1
             let episode = nextEpisode.indexNumber ?? 1
-            return "Play S\(season) E\(episode)"
+            return i18n.t("item:play_episode", ["season": season, "episode": episode])
         }
 
         let hasProgress = (item.userData?.playbackPositionTicks ?? 0) > 0 && item.userData?.isPlayed != true
-        return hasProgress ? "Resume" : "Play"
+        return hasProgress ? i18n.t("resume") : i18n.t("item:play")
     }
 
     // MARK: - Actions

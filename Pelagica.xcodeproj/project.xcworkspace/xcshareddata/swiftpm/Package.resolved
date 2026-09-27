@@ -1,5 +1,5 @@
 {
-  "originHash" : "9afd20316bf71d78d216d69e291410426b1bc83b3825c5484cdc413ebd0ef2be",
+  "originHash" : "978515802a171b46ea285a0994ac8664516443ee0b4675a724e50a1081e380e2",
   "pins" : [
     {
       "identity" : "combine-schedulers",
@@ -17,6 +17,15 @@
       "state" : {
         "revision" : "31249885da1052872e0ac91a2943f62567c0d96d",
         "version" : "2.2.1"
+      }
+    },
+    {
+      "identity" : "i18n",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/PelagicaApp/i18n",
+      "state" : {
+        "revision" : "bbb4debebe3fca94c54a8056b4afb713e4dd3558",
+        "version" : "1.0.0"
       }
     },
     {

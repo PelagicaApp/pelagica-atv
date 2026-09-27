@@ -17,21 +17,21 @@ struct LoginMethodView: View {
                 Button {
                     path.append(AuthRoute.quickConnect(server))
                 } label: {
-                    Text("Sign in with Quick Connect")
+                    Text(i18n.t("login:sign_in_with_quick_connect"))
                 }
                 .buttonStyle(PelagicaButtonStyle(emphasis: .primary))
                 
                 Button {
                     path.append(AuthRoute.login(server))
                 } label: {
-                    Text("Sign in with username & password")
+                    Text(i18n.t("login:sign_in_with_password"))
                 }
                 .buttonStyle(PelagicaButtonStyle(emphasis: .secondary))
                 
                 Button {
                     path.removeLast(path.count)
                 } label: {
-                    Text("Use a different server")
+                    Text(i18n.t("login:use_different_server"))
                 }
                 .buttonStyle(PelagicaButtonStyle(emphasis: .plain))
             }

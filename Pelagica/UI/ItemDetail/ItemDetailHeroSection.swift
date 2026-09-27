@@ -125,7 +125,7 @@ struct ItemDetailHeroSection: View {
     }
 
     private var titleText: some View {
-        Text(item.name ?? "Untitled")
+        Text(item.name ?? i18n.t("no_title"))
             .font(.system(size: 56, weight: .bold))
             .foregroundStyle(.white)
     }
@@ -191,13 +191,13 @@ struct ItemDetailHeroSection: View {
 
             if trailerAvailable {
                 Button(action: onPlayTrailer) {
-                    Label("Trailer", systemImage: "film")
+                    Label(i18n.t("item:trailer"), systemImage: "film")
                 }
                 .buttonStyle(DetailActionButtonStyle(emphasis: .secondary))
             }
 
             Button(action: onToggleWatchlist) {
-                Label(isWatchlist ? "In Watchlist" : "Add to Watchlist", systemImage: isWatchlist ? "bookmark.fill" : "bookmark")
+                Label(isWatchlist ? i18n.t("item:remove_from_watchlist") : i18n.t("item:add_to_watchlist"), systemImage: isWatchlist ? "bookmark.fill" : "bookmark")
             }
             .buttonStyle(DetailActionButtonStyle(emphasis: .secondary))
             .disabled(isTogglingWatchlist)

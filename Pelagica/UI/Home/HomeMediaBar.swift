@@ -151,7 +151,7 @@ struct HomeMediaBar: View {
     private var durationText: String? {
         if currentItem?.type == .series {
             let seasonCount = currentItem?.childCount ?? 1
-            return seasonCount == 1 ? "1 Season" : "\(seasonCount) Seasons"
+            return i18n.t("season_count", count: seasonCount)
         }
 
         guard let ticks = currentItem?.runTimeTicks else { return nil }
@@ -183,7 +183,7 @@ struct HomeMediaBar: View {
     private var buttonsRow: some View {
         HStack(spacing: 20) {
             NavigationLink(value: currentItem.map { ItemDetailRoute(item: $0) }) {
-                Label("Watch now", systemImage: "play.fill")
+                Label(i18n.t("home:play"), systemImage: "play.fill")
             }
             .buttonStyle(DetailActionButtonStyle(emphasis: .primary))
             .prefersDefaultFocus(true, in: namespace)
@@ -191,7 +191,7 @@ struct HomeMediaBar: View {
 
             if showFavoriteButton {
                 Button(action: toggleFavorite) {
-                    Label(isFavorite ? "Favorited" : "Favorite", systemImage: isFavorite ? "heart.fill" : "heart")
+                    Label(isFavorite ? i18n.t("item:unfavorite") : i18n.t("item:favorite"), systemImage: isFavorite ? "heart.fill" : "heart")
                 }
                 .buttonStyle(DetailActionButtonStyle(emphasis: .secondary))
                 .disabled(isTogglingFavorite)
@@ -200,7 +200,7 @@ struct HomeMediaBar: View {
 
             if showWatchlistButton {
                 Button(action: toggleWatchlist) {
-                    Label(isWatchlist ? "In Watchlist" : "Add to Watchlist", systemImage: isWatchlist ? "bookmark.fill" : "bookmark")
+                    Label(isWatchlist ? i18n.t("item:remove_from_watchlist") : i18n.t("item:add_to_watchlist"), systemImage: isWatchlist ? "bookmark.fill" : "bookmark")
                 }
                 .buttonStyle(DetailActionButtonStyle(emphasis: .secondary))
                 .disabled(isTogglingWatchlist)

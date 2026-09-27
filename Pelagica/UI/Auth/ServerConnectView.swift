@@ -20,15 +20,15 @@ struct ServerConnectView: View {
             PelagicaHeader()
 
             VStack(alignment: .leading, spacing: 16) {
-                Text("Enter a server address manually")
+                Text(i18n.t("login:enter_manually"))
                     .foregroundStyle(.secondary)
 
-                PelagicaField(placeholder: "jellyfin.example.com", text: $address, label: "Server Address", contentType: .URL, onCommit: connectManually)
+                PelagicaField(placeholder: "jellyfin.example.com", text: $address, label: i18n.t("login:server_address"), contentType: .URL, onCommit: connectManually)
 
                 Button {
                     connectManually()
                 } label: {
-                    Text(isConnecting ? "Connecting…" : "Connect to Server")
+                    Text(isConnecting ? i18n.t("login:connecting") : i18n.t("login:connect"))
                 }
                 .buttonStyle(PelagicaButtonStyle(emphasis: .primary))
                 .disabled(address.trimmingCharacters(in: .whitespaces).isEmpty || isConnecting)
@@ -52,7 +52,7 @@ struct ServerConnectView: View {
 
             if !discoveredServers.isEmpty {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Servers on your network")
+                    Text(i18n.t("login:discovered_servers"))
                         .foregroundStyle(.secondary)
 
                     VStack(spacing: 12) {
@@ -99,7 +99,7 @@ struct ServerConnectView: View {
                 let server = try await appState.resolveServer(fromInput: address)
                 path.append(AuthRoute.loginMethod(server))
             } catch {
-                errorMessage = "Couldn't connect to that server."
+                errorMessage = i18n.t("login:could_not_find_server")
             }
         }
     }

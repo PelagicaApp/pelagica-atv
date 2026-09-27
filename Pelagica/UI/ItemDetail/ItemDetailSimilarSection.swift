@@ -12,7 +12,7 @@ struct ItemDetailSimilarSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            Text("More Like This")
+            Text(i18n.t("item:more_like_this"))
                 .font(.system(size: 34, weight: .bold))
                 .foregroundStyle(.white)
                 .padding(.leading, 90)

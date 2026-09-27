@@ -62,7 +62,7 @@ struct SearchTabView: View {
             .navigationDestination(for: ItemDetailRoute.self) { route in
                 ItemDetailView(item: route.item)
             }
-            .searchable(text: $query, prompt: "Search")
+            .searchable(text: $query, prompt: i18n.t("search"))
         }
         .onDisappear { path = NavigationPath() }
         .task(id: query) {
@@ -82,11 +82,11 @@ struct SearchTabView: View {
                 .font(.system(size: 64))
                 .foregroundStyle(.white.opacity(0.3))
             
-            Text("No results found")
+            Text(i18n.t("search:no_results"))
                 .font(.system(size: 28, weight: .semibold))
                 .foregroundStyle(.white)
             
-            Text("Try adjusting your search or filter to find what you're looking for.")
+            Text(i18n.t("search:no_results_description"))
                 .font(.system(size: 20))
                 .foregroundStyle(.secondary)
         }
@@ -110,7 +110,7 @@ struct SearchTabView: View {
             results = result.items ?? []
         } catch is CancellationError {
         } catch {
-            errorMessage = "Couldn't load items."
+            errorMessage = i18n.t("search:error_occurred_while_searching")
         }
     }
 }
