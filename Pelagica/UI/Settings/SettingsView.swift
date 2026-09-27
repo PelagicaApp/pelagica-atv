@@ -17,6 +17,12 @@ struct SettingsView: View {
     ]
     
     var body: some View {
+        NavigationStack {
+            content
+        }
+    }
+    
+    private var content: some View {
         ZStack {
             PelagicaBackground()
             
@@ -48,9 +54,9 @@ struct SettingsView: View {
                     }
                 }
                 
-                Text("\(i18n.t("settings:version_label")) \(appVersionString)")
-                    .foregroundStyle(.secondary)
-                    .font(.system(size: 18, weight: .semibold))
+                SettingsSection(title: i18n.t("settings:about_section_title")) {
+                    aboutSection
+                }
             }
             .padding(60)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -61,6 +67,26 @@ struct SettingsView: View {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
         return "\(version) (\(build))"
+    }
+    
+    // MARK: - About section
+    
+    private var aboutSection: some View {
+        HStack(spacing: 15) {
+            Text("\(i18n.t("settings:version_label")) \(appVersionString)")
+                .foregroundStyle(.white)
+                .font(.system(size: 28, weight: .semibold))
+            
+            Spacer()
+            
+            NavigationLink {
+                AttributionsView()
+            } label: {
+                Text("Attributions")
+            }
+            .buttonStyle(PelagicaButtonStyle(emphasis: .plain))
+            .frame(maxWidth: 320)
+        }
     }
     
     // MARK: - Profile section
