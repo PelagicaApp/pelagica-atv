@@ -74,8 +74,7 @@ final class VLCPlayerController: NSObject, ObservableObject {
         audioStream: MediaStream?,
         subtitle: SubtitleSelection
     ) {
-        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
-        try? AVAudioSession.sharedInstance().setActive(true)
+        Self.activateAudioSession()
 
         embeddedAudioStreams = mediaStreams.filter { $0.type == .audio && $0.isExternal != true }
         embeddedSubtitleStreams = mediaStreams.filter { $0.type == .subtitle && $0.isExternal != true }
@@ -106,6 +105,44 @@ final class VLCPlayerController: NSObject, ObservableObject {
         player.media = nil
         nowPlaying.deactivate()
         UIApplication.shared.isIdleTimerDisabled = false
+        Self.deactivateAudioSession()
+    }
+
+    // MARK: Audio session
+
+    private static let audioSessionQueue = DispatchQueue(label: "app.pelagica.audio-session", qos: .userInitiated)
+
+    private static func activateAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        audioSessionQueue.async {
+            do {
+                try session.setCategory(.playback, mode: .moviePlayback)
+            } catch {
+                print("Pelagica playback: failed to set audio session category: \(error)")
+            }
+            if #available(tvOS 27.0, *) {
+                session.activate(options: []) { activated, error in
+                    if !activated { print("Pelagica playback: failed to activate audio session: \(String(describing: error))") }
+                }
+            } else {
+                do {
+                    try session.setActive(true)
+                } catch {
+                    print("Pelagica playback: failed to activate audio session: \(error)")
+                }
+            }
+        }
+    }
+
+    private static func deactivateAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        audioSessionQueue.async {
+            if #available(tvOS 27.0, *) {
+                session.deactivate(options: .notifyOthersOnDeactivation) { _, _ in }
+            } else {
+                try? session.setActive(false, options: .notifyOthersOnDeactivation)
+            }
+        }
     }
 
     // MARK: Now Playing
