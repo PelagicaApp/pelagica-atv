@@ -82,7 +82,7 @@ struct SettingsView: View {
             NavigationLink {
                 AttributionsView()
             } label: {
-                Text("Attributions")
+                Text(i18n.t("settings:attributions_title"))
             }
             .buttonStyle(PelagicaButtonStyle(emphasis: .plain))
             .frame(maxWidth: 320)

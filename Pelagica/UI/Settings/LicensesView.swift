@@ -33,11 +33,11 @@ struct LicensesView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 40) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Open Source Licenses")
+                        Text(i18n.t("settings:open_source_licenses_title"))
                             .font(.system(size: 40, weight: .bold))
                             .foregroundStyle(.white)
 
-                        Text("Pelagica is free software licensed under the GPL-3.0. Source code: github.com/PelagicaApp/pelagica-atv")
+                        Text(i18n.t("settings:pelagica_license_notice", ["license": "GPL-3.0", "url": "github.com/PelagicaApp/pelagica-atv"]))
                             .font(.system(size: 22))
                             .foregroundStyle(.secondary)
                     }

@@ -11,7 +11,7 @@ struct AttributionsView: View {
             PelagicaBackground()
 
             VStack(alignment: .leading, spacing: 40) {
-                Text("Attributions")
+                Text(i18n.t("settings:attributions_title"))
                     .font(.system(size: 40, weight: .bold))
                     .foregroundStyle(.white)
 
@@ -21,7 +21,7 @@ struct AttributionsView: View {
                         .scaledToFit()
                         .frame(height: 60)
 
-                    Text("This product uses the TMDB API but is not endorsed or certified by TMDB.")
+                    Text(i18n.t("settings:tmdb_attribution"))
                         .foregroundStyle(.secondary)
                         .font(.system(size: 24))
 
@@ -34,7 +34,7 @@ struct AttributionsView: View {
                 NavigationLink {
                     LicensesView()
                 } label: {
-                    Text("Open Source Licenses")
+                    Text(i18n.t("settings:open_source_licenses_title"))
                 }
                 .buttonStyle(PelagicaButtonStyle(emphasis: .secondary))
                 .frame(maxWidth: 480)
