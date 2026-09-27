@@ -76,6 +76,10 @@ struct ItemDetailView: View {
                             onPlayTrailer: playLocalTrailer
                         )
                     }
+                    
+                    if let people = item.people, !people.isEmpty {
+                        ItemDetailsPeopleSection(people: people)
+                    }
 
                     if !collectionItems.isEmpty {
                         ItemDetailCollectionsSection(collectionItems: collectionItems)

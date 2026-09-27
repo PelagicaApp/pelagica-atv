@@ -81,6 +81,9 @@ struct HomeTabView: View {
             .navigationDestination(for: ItemDetailRoute.self) { route in
                 ItemDetailView(item: route.item)
             }
+            .navigationDestination(for: PersonDetailRoute.self) { route in
+                PersonDetailView(route: route)
+            }
             .navigationDestination(for: GenreRoute.self) { route in
                 LibraryItemsView(genre: route)
             }

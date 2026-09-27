@@ -59,6 +59,9 @@ struct SearchTabView: View {
                     .padding(60)
                 }
             }
+            .navigationDestination(for: PersonDetailRoute.self) { route in
+                PersonDetailView(route: route)
+            }
             .navigationDestination(for: ItemDetailRoute.self) { route in
                 ItemDetailView(item: route.item)
             }
