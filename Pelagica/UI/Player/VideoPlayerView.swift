@@ -488,7 +488,7 @@ struct VideoPlayerView: View {
                 playSessionID: currentPlaySessionID,
                 positionTicks: positionTicks
             )))
-            appState.notifyPlaybackStopped()
+            appState.notifyWatchStateChanged()
         }
     }
 }

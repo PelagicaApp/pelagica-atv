@@ -87,7 +87,7 @@ struct HomeTabView: View {
         }
         .onDisappear { path = NavigationPath() }
         .task { await loadHome() }
-        .onChange(of: appState.playbackStopCount) {
+        .onChange(of: appState.watchStateVersion) {
             Task { await refreshProgressRows() }
         }
     }

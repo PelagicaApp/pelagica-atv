@@ -13,6 +13,7 @@ struct ItemDetailEpisodesSection: View {
     let seasonsNamespace: Namespace.ID
     let episodesNamespace: Namespace.ID
     let onPlayEpisode: (BaseItemDto) -> Void
+    let onTogglePlayed: (BaseItemDto) -> Void
     let onSelectSeason: (String) async -> Void
 
     var body: some View {
@@ -64,7 +65,8 @@ struct ItemDetailEpisodesSection: View {
                         episode: episode,
                         isDefaultFocus: episode.id == episodes.first?.id,
                         focusNamespace: episodesNamespace,
-                        onPlay: onPlayEpisode
+                        onPlay: onPlayEpisode,
+                        onTogglePlayed: onTogglePlayed
                     )
                 }
             }
@@ -106,6 +108,7 @@ private struct EpisodeCard: View {
     var isDefaultFocus = false
     var focusNamespace: Namespace.ID
     var onPlay: (BaseItemDto) -> Void
+    var onTogglePlayed: (BaseItemDto) -> Void
 
     private let cardWidth: CGFloat = 420
     private let cornerRadius: CGFloat = 12
@@ -119,6 +122,17 @@ private struct EpisodeCard: View {
             }
             .buttonStyle(.card)
             .prefersDefaultFocus(isDefaultFocus, in: focusNamespace)
+            .contextMenu {
+                Button {
+                    onTogglePlayed(episode)
+                } label: {
+                    if isPlayed {
+                        Label(i18n.t("item:mark_as_unplayed"), systemImage: "eye.slash")
+                    } else {
+                        Label(i18n.t("item:mark_as_played"), systemImage: "eye")
+                    }
+                }
+            }
 
             Text(episodeTitle)
                 .font(.system(size: 24, weight: .semibold))
@@ -136,6 +150,8 @@ private struct EpisodeCard: View {
         }
         .frame(width: cardWidth, alignment: .leading)
     }
+
+    private var isPlayed: Bool { episode.userData?.isPlayed ?? false }
 
     private var episodeTitle: String {
         let number = episode.indexNumber.map { "\($0). " } ?? ""

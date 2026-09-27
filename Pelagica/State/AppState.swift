@@ -51,7 +51,7 @@ final class AppState: ObservableObject {
     @Published private(set) var activeProfile: Profile?
     @Published private(set) var isAddingProfile = false
     @Published private(set) var reauthServer: DiscoveredServer?
-    @Published private(set) var playbackStopCount = 0
+    @Published private(set) var watchStateVersion = 0
     
     private let keychain = KeychainStore()
     private let defaults = UserDefaults.standard
@@ -72,8 +72,8 @@ final class AppState: ObservableObject {
         }
     }
     
-    func notifyPlaybackStopped() {
-        playbackStopCount += 1
+    func notifyWatchStateChanged() {
+        watchStateVersion += 1
     }
 
     var isLoggedIn: Bool {

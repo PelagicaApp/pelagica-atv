@@ -54,6 +54,7 @@ struct ItemDetailView: View {
                             seasonsNamespace: seasonsNamespace,
                             episodesNamespace: episodesNamespace,
                             onPlayEpisode: startPlayback,
+                            onTogglePlayed: togglePlayed,
                             onSelectSeason: { await loadEpisodes(seasonID: $0) }
                         )
                     }
@@ -168,6 +169,29 @@ struct ItemDetailView: View {
                 ))
             } catch {
                 isWatchlist = !newValue
+            }
+        }
+    }
+
+    private func togglePlayed(_ episode: BaseItemDto) {
+        guard let client = appState.client, let id = episode.id else { return }
+        let userID = appState.currentUser?.id
+        let markPlayed = episode.userData?.isPlayed != true
+
+        Task {
+            do {
+                let userData = try await client.send(markPlayed
+                    ? Paths.markPlayedItem(itemID: id, userID: userID)
+                    : Paths.markUnplayedItem(itemID: id, userID: userID)
+                ).value
+                if let index = episodes.firstIndex(where: { $0.id == id }) {
+                    episodes[index].userData = userData
+                }
+                appState.notifyWatchStateChanged()
+                await loadFullItem()
+                await loadNextEpisode()
+            } catch {
+                // The episode keeps its previous state, which the menu still reflects.
             }
         }
     }
