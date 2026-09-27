@@ -18,7 +18,7 @@ struct SettingsView: View {
     
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            PelagicaBackground()
             
             VStack(alignment: .leading, spacing: 40) {
                 Text(i18n.t("settings:title"))

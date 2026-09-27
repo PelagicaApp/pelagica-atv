@@ -70,7 +70,7 @@ struct ItemDetailView: View {
             }
         }
         .ignoresSafeArea()
-        .background(Color.black.ignoresSafeArea())
+        .background(PelagicaBackground())
         .task {
             await loadFullItem()
             await loadLocalTrailer()

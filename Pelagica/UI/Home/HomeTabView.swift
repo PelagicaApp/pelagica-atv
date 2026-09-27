@@ -23,7 +23,7 @@ struct HomeTabView: View {
         NavigationStack(path: $path) {
             GeometryReader { proxy in
                 ZStack {
-                    Color.black.ignoresSafeArea()
+                    PelagicaBackground()
 
                     if isLoadingConfig {
                         ProgressView()

@@ -22,7 +22,7 @@ struct LibraryView: View {
     var body: some View {
         NavigationStack(path: $path) {
             ZStack {
-                Color.black.ignoresSafeArea()
+                PelagicaBackground()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 32) {

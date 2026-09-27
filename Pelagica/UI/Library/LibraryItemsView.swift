@@ -50,7 +50,7 @@ struct LibraryItemsView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            PelagicaBackground()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 32) {

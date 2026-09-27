@@ -10,7 +10,7 @@ struct PageLoadingView: View {
     
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            PelagicaBackground()
             VStack(spacing: 30) {
                 ProgressView()
                 Text(text)

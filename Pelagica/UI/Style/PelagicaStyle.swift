@@ -19,12 +19,27 @@ struct PelagicaHeader: View {
     }
 }
 
+struct PelagicaBackground: View {
+    var body: some View {
+//        LinearGradient(
+//            colors: [
+//                Color(white: 0.08),
+//                .black,
+//            ],
+//            startPoint: .top,
+//            endPoint: .bottom
+//        )
+//        .ignoresSafeArea()
+        Color.black.ignoresSafeArea()
+    }
+}
+
 struct PelagicaScreen<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            PelagicaBackground()
 
             VStack(spacing: 40) {
                 content

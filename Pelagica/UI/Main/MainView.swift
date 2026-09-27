@@ -37,7 +37,7 @@ struct MainView: View {
                 .id(languageOverride)
             }
         }
-        .background(Color.black.ignoresSafeArea())
+        .background(PelagicaBackground())
         .environmentObject(configStore)
         .environmentObject(navigationCoordinator)
         .task {
