@@ -44,6 +44,7 @@ struct LibraryItemsView: View {
     @State private var errorMessage: String?
     @State private var sortBy: ItemSortBy = .dateCreated
     @State private var sortOrder: JellyfinAPI.SortOrder = .descending
+    @State private var loadedSortKey: String?
 
     /// How many items from the end of the loaded list trigger fetching the next batch.
     private let prefetchThreshold = 8
@@ -99,6 +100,7 @@ struct LibraryItemsView: View {
             }
         }
         .task(id: sortKey) {
+            guard loadedSortKey != sortKey else { return }
             items = []
             totalCount = nil
             isLoadingMore = true
@@ -194,6 +196,7 @@ struct LibraryItemsView: View {
             let result = try await client.send(Paths.getItems(parameters: parameters)).value
             guard requestedSortKey == sortKey else { return }
             items.append(contentsOf: result.items ?? [])
+            loadedSortKey = requestedSortKey
             totalCount = result.totalRecordCount ?? items.count
         } catch is CancellationError {
         } catch {
