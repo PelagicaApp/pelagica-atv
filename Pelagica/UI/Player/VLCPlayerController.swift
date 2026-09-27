@@ -77,6 +77,7 @@ final class VLCPlayerController: NSObject, ObservableObject {
         url: URL,
         startSeconds: TimeInterval,
         knownDurationSeconds: TimeInterval?,
+        displayAspectRatio: String? = nil,
         mediaStreams: [MediaStream],
         audioStream: MediaStream?,
         subtitle: SubtitleSelection
@@ -103,10 +104,22 @@ final class VLCPlayerController: NSObject, ObservableObject {
             media.addOption(":start-time=\(startSeconds)")
         }
         player.media = media
+        setAspectRatioOverride(displayAspectRatio)
         player.play()
         UIApplication.shared.isIdleTimerDisabled = true
         activateNowPlaying()
         publishTimeline()
+    }
+
+    private func setAspectRatioOverride(_ ratio: String?) {
+        guard let ratio, let cString = strdup(ratio) else {
+            player.videoAspectRatio = nil
+            return
+        }
+        print("Pelagica playback: forcing display aspect ratio \(ratio)")
+        // libvlc copies the value
+        player.videoAspectRatio = cString
+        free(cString)
     }
 
     func stop() {

@@ -388,6 +388,7 @@ struct VideoPlayerView: View {
                 url: url,
                 startSeconds: Double(ticks) / 10_000_000,
                 knownDurationSeconds: currentItem.runTimeTicks.map { Double($0) / 10_000_000 },
+                displayAspectRatio: displayAspectRatio(for: mediaStreams),
                 mediaStreams: method == .transcode ? [] : mediaStreams,
                 audioStream: method == .transcode ? nil : audioStreams.first { $0.index == selectedAudioStreamIndex },
                 subtitle: subtitleSelection(for: selectedSubtitle)
@@ -399,6 +400,19 @@ struct VideoPlayerView: View {
             print("Pelagica playback: PlaybackInfo request failed for item \(itemID): \(error)")
             didFailToResolve = true
         }
+    }
+
+    private func displayAspectRatio(for mediaStreams: [MediaStream]) -> String? {
+        guard
+            let video = mediaStreams.first(where: { $0.type == .video }),
+            video.isAnamorphic == true,
+            let parts = video.aspectRatio?.split(separator: ":"),
+            parts.count == 2,
+            let numerator = Double(parts[0]),
+            let denominator = Double(parts[1]),
+            numerator > 0, denominator > 0
+        else { return nil }
+        return "\(Int((numerator / denominator * 1000).rounded())):1000"
     }
 
     private func fetchSkippableSegments() async {
