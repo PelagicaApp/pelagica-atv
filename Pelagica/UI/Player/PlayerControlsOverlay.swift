@@ -86,7 +86,9 @@ struct PlayerControlsOverlay: View {
             if !controller.isBuffering && !controller.isPlaying {
                 Image(systemName: "pause.fill")
                     .foregroundColor(.white)
-                    .scaleEffect(3)
+                    .padding(16)
+                    .background(.black.opacity(0.6), in: Circle())
+                    .scaleEffect(2)
             }
 
             VStack(alignment: .leading, spacing: 0) {
