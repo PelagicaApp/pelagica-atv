@@ -30,7 +30,14 @@ struct AttributionsView: View {
                 .padding(.horizontal, 28)
                 .padding(.vertical, 24)
                 .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 20))
-                .focusable()
+
+                NavigationLink {
+                    LicensesView()
+                } label: {
+                    Text("Open Source Licenses")
+                }
+                .buttonStyle(PelagicaButtonStyle(emphasis: .secondary))
+                .frame(maxWidth: 480)
             }
             .padding(60)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
