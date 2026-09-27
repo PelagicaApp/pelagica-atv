@@ -133,6 +133,18 @@ struct HomeTabView: View {
                 }
             }
 
+        case .recommended(let recommendations, let showSimilarity):
+            HomeSectionRow(title: row.title) {
+                ForEach(recommendations.indices, id: \.self) { index in
+                    let recommendation = recommendations[index]
+                    ItemCard(
+                        item: recommendation.item,
+                        similarity: showSimilarity ? recommendation.similarity : nil
+                    )
+                    .frame(width: 280)
+                }
+            }
+
         case .continueStyle(let titleLine, let detailLines):
             HomeSectionRow(title: row.title) {
                 ForEach(row.items.indices, id: \.self) { index in
@@ -325,6 +337,25 @@ struct HomeTabView: View {
                 title: section.title.orDefault(i18n.t("studios")),
                 items: [],
                 kind: .studios(Array(studios.prefix(section.limit.orDefaultLimit(20))))
+            )]
+
+        case .streamystatsRecommended(let section):
+            guard let userID = appState.currentUser?.id, let streamystatsURL = configStore.config.streamystatsURL, !streamystatsURL.isEmpty else { return [] }
+            let recommendations = await StreamystatsAPI.fetchRecommendations(
+                streamystatsURL: streamystatsURL,
+                type: section.recommendationType,
+                limit: section.limit.orDefaultLimit(20),
+                client: client,
+                userID: userID
+            )
+            guard !recommendations.isEmpty else { return [] }
+            return [HomeRow(
+                title: section.title.orDefault(i18n.t("home:recommended_for_you")),
+                items: [],
+                kind: .recommended(
+                    recommendations,
+                    showSimilarity: section.showSimilarity ?? true
+                )
             )]
 
         case .mediaBar, .unsupported:
@@ -570,7 +601,7 @@ struct HomeTabView: View {
             return .landscape
         case .items(let section):
             return section.useThumbImage == true ? .landscape : .poster
-        case .recentlyAdded, .mediaBar, .unsupported:
+        case .recentlyAdded, .streamystatsRecommended, .mediaBar, .unsupported:
             return .poster
         }
     }
@@ -591,6 +622,8 @@ struct HomeTabView: View {
             return section.title.orDefault(i18n.t("genres"))
         case .studios(let section):
             return section.title.orDefault(i18n.t("studios"))
+        case .streamystatsRecommended(let section):
+            return section.title.orDefault(i18n.t("home:recommended_for_you"))
         case .recentlyAdded, .mediaBar, .unsupported:
             return nil
         }
@@ -722,6 +755,7 @@ private enum HomeRowKind {
     case library
     case genres([GenreEntry])
     case studios([StudioEntry])
+    case recommended([StreamystatsRecommendation], showSimilarity: Bool)
 }
 
 private struct HomeRow: Identifiable {
@@ -734,6 +768,7 @@ private struct HomeRow: Identifiable {
         switch kind {
         case .genres(let genres): return genres.isEmpty
         case .studios(let studios): return studios.isEmpty
+        case .recommended(let recommendations, _): return recommendations.isEmpty
         default: return items.isEmpty
         }
     }

@@ -14,6 +14,8 @@ struct ItemCard: View {
         item.premiereDate.map { String(Calendar.current.component(.year, from: $0)) } ?? ""
     }
     var useThumb: Bool = false
+    /// Streamystats similarity score (0–1)
+    var similarity: Double?
 
     private let cornerRadius: CGFloat = 16
     private var posterAspectRatio: CGFloat { useThumb ? 16.0 / 9.0 : 2.0 / 3.0 }
@@ -31,6 +33,9 @@ struct ItemCard: View {
                         }
                 }
                 .aspectRatio(posterAspectRatio, contentMode: .fit)
+                .overlay(alignment: .topLeading) {
+                    if let similarity { similarityBadge(similarity) }
+                }
                 .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
                 .contentShape(RoundedRectangle(cornerRadius: cornerRadius))
             }
@@ -75,6 +80,22 @@ struct ItemCard: View {
         .frame(width: size.width, height: size.height)
     }
     
+    private func similarityBadge(_ similarity: Double) -> some View {
+        let color: Color = similarity >= 0.6 ? .green : similarity >= 0.3 ? .yellow : .red
+        return HStack(spacing: 6) {
+            Image(systemName: "chart.line.uptrend.xyaxis")
+            Text("\(Int((similarity * 100).rounded()))%")
+        }
+        .font(.system(size: 18, weight: .semibold))
+        .foregroundStyle(color)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(.black.opacity(0.7), in: Capsule())
+        .padding(12)
+        .contentTransition(.identity)
+        .transaction { $0.animation = nil }
+    }
+
     private func updateMeasuredWidth(_ width: CGFloat) {
         guard width > 0 else { return }
         if let measuredWidth, abs(measuredWidth - width) < 1 { return }

@@ -136,6 +136,20 @@ struct GenresSection: Decodable {
     var limit: Int?
 }
 
+enum RecommendationType: String, Decodable {
+    case all
+    case movie = "Movie"
+    case series = "Series"
+}
+
+struct RecommendedItemsSection: Decodable {
+    var title: String?
+    var recommendationType: RecommendationType?
+    var limit: Int?
+    var showSimilarity: Bool?
+    var showBasedOn: Bool?
+}
+
 struct StudiosSection: Decodable {
     var title: String?
     var limit: Int?
@@ -151,6 +165,7 @@ enum HomeScreenSection: Decodable {
     case libraries(LibrariesSection)
     case genres(GenresSection)
     case studios(StudiosSection)
+    case streamystatsRecommended(RecommendedItemsSection)
     case unsupported
 
     private enum CodingKeys: String, CodingKey {
@@ -175,6 +190,7 @@ enum HomeScreenSection: Decodable {
         case "libraries": self = .libraries(try LibrariesSection(from: decoder))
         case "genres": self = .genres(try GenresSection(from: decoder))
         case "studios": self = .studios(try StudiosSection(from: decoder))
+        case "streamystatsRecommended": self = .streamystatsRecommended(try RecommendedItemsSection(from: decoder))
         default: self = .unsupported
         }
     }
@@ -183,6 +199,12 @@ enum HomeScreenSection: Decodable {
 struct AppConfig: Decodable {
     var homeScreenSections: [HomeScreenSection]?
     var itemPage: ItemPageSettings?
+    var streamystatsURL: String?
+
+    enum CodingKeys: String, CodingKey {
+        case homeScreenSections, itemPage
+        case streamystatsURL = "streamystatsUrl"
+    }
 }
 
 extension AppConfig {
