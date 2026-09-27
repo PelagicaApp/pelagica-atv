@@ -48,6 +48,10 @@ final class VLCPlayerController: NSObject, ObservableObject {
     private var lastProgressReport: TimeInterval = -.infinity
     /// VLC keeps reporting the pre-seek time for a moment after a seek. Those updates are ignored until it lands near the target (or the deadline passes) so the scrubber doesn't snap back
     private var pendingSeek: (target: TimeInterval, deadline: Date)?
+    /// Kept here because reading `videoAspectRatio` back from VLCKit leaks the returned C string.
+    private(set) var aspectRatioOverride: String?
+
+    static let networkCachingMilliseconds = 1500
 
     private static let seekSettleTolerance: TimeInterval = 1.5
     private static let seekSettleTimeout: TimeInterval = 3
@@ -99,7 +103,7 @@ final class VLCPlayerController: NSObject, ObservableObject {
         setBuffering(true)
 
         let media = VLCMedia(url: url)
-        media.addOption(":network-caching=1500")
+        media.addOption(":network-caching=\(Self.networkCachingMilliseconds)")
         if startSeconds > 0 {
             media.addOption(":start-time=\(startSeconds)")
         }
@@ -112,6 +116,7 @@ final class VLCPlayerController: NSObject, ObservableObject {
     }
 
     private func setAspectRatioOverride(_ ratio: String?) {
+        aspectRatioOverride = ratio
         guard let ratio, let cString = strdup(ratio) else {
             player.videoAspectRatio = nil
             return
@@ -298,6 +303,52 @@ final class VLCPlayerController: NSObject, ObservableObject {
         externalSubtitleTrackIDs[awaiting.streamIndex] = newID
         awaitingExternalSubtitle = nil
         player.currentVideoSubTitleIndex = newID
+    }
+
+    // MARK: Diagnostics
+
+    /// A point-in-time view of VLC's own state, for the playback info panel
+    struct Diagnostics {
+        let date: Date
+        let state: String
+        let rate: Float
+        let videoSize: CGSize
+        let hasVideoOut: Bool
+        let audioTrackID: Int32
+        let subtitleTrackID: Int32
+        let streamURL: URL?
+        let readBytes: Int
+        let demuxCorrupted: Int
+        let demuxDiscontinuities: Int
+        let decodedVideo: Int
+        let displayedPictures: Int
+        let lostPictures: Int
+        let decodedAudio: Int
+        let playedAudioBuffers: Int
+        let lostAudioBuffers: Int
+    }
+
+    func diagnostics() -> Diagnostics {
+        let stats = player.media?.statistics
+        return Diagnostics(
+            date: Date(),
+            state: VLCMediaPlayerStateToString(player.state),
+            rate: player.rate,
+            videoSize: player.videoSize,
+            hasVideoOut: player.hasVideoOut,
+            audioTrackID: player.currentAudioTrackIndex,
+            subtitleTrackID: player.currentVideoSubTitleIndex,
+            streamURL: player.media?.url,
+            readBytes: Int(stats?.readBytes ?? 0),
+            demuxCorrupted: Int(stats?.demuxCorrupted ?? 0),
+            demuxDiscontinuities: Int(stats?.demuxDiscontinuity ?? 0),
+            decodedVideo: Int(stats?.decodedVideo ?? 0),
+            displayedPictures: Int(stats?.displayedPictures ?? 0),
+            lostPictures: Int(stats?.lostPictures ?? 0),
+            decodedAudio: Int(stats?.decodedAudio ?? 0),
+            playedAudioBuffers: Int(stats?.playedAudioBuffers ?? 0),
+            lostAudioBuffers: Int(stats?.lostAudioBuffers ?? 0)
+        )
     }
 
     // MARK: State updates

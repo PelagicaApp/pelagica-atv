@@ -33,6 +33,7 @@ struct VideoPlayerView: View {
     @State private var introRange: ClosedRange<TimeInterval>?
     @State private var outroRange: ClosedRange<TimeInterval>?
     @State private var trickplay: TrickplayProvider?
+    @State private var currentMediaSource: MediaSourceInfo?
 
     init(item: BaseItemDto, startTicks: Int = 0) {
         self.item = item
@@ -67,6 +68,7 @@ struct VideoPlayerView: View {
                     introRange: introRange,
                     outroRange: outroRange,
                     trickplay: trickplay,
+                    playbackInfo: playbackInfoDetails,
                     onSelectAudio: selectAudioTrack,
                     onSelectSubtitle: selectSubtitleTrack,
                     onClose: close
@@ -120,6 +122,20 @@ struct VideoPlayerView: View {
     }
 
     private var isTranscoded: Bool { playMethod == .transcode }
+
+    private var playbackInfoDetails: PlaybackInfoDetails? {
+        guard let currentMediaSource else { return nil }
+        let streams = currentMediaSource.mediaStreams ?? []
+        return PlaybackInfoDetails(
+            playMethod: playMethod,
+            mediaSource: currentMediaSource,
+            playSessionID: currentPlaySessionID,
+            videoStream: streams.first { $0.type == .video },
+            audioStream: audioStreams.first { $0.index == selectedAudioStreamIndex },
+            subtitleStream: subtitleStreams.first { $0.index == selectedSubtitleStreamIndex },
+            isSubtitleBurnedIn: burnedInSubtitleStreamIndex != nil && burnedInSubtitleStreamIndex == selectedSubtitleStreamIndex
+        )
+    }
 
     private func close() {
         dismiss()
@@ -373,6 +389,7 @@ struct VideoPlayerView: View {
 
             activeItemID = itemID
             currentMediaSourceID = mediaSourceID
+            currentMediaSource = mediaSource
             currentPlaySessionID = info.playSessionID
             playMethod = method
             burnedInSubtitleStreamIndex = method == .transcode ? subtitleStreamIndex : nil

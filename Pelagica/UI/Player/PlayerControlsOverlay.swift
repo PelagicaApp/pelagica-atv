@@ -31,6 +31,7 @@ struct PlayerControlsOverlay: View {
     let introRange: ClosedRange<TimeInterval>?
     let outroRange: ClosedRange<TimeInterval>?
     let trickplay: TrickplayProvider?
+    let playbackInfo: PlaybackInfoDetails?
     let onSelectAudio: (MediaStream) -> Void
     let onSelectSubtitle: (MediaStream?) -> Void
     let onClose: () -> Void
@@ -39,6 +40,7 @@ struct PlayerControlsOverlay: View {
         case scrubber
         case audio
         case subtitles
+        case playbackInfo
         case skip
         /// A row in the open track panel, keyed by stream index (`nil` for "Off").
         case trackOption(Int?)
@@ -62,6 +64,7 @@ struct PlayerControlsOverlay: View {
     @State private var openPanel: TrackPanel?
     @State private var scrubGeneration = 0
     @State private var holdDirection: MoveCommandDirection?
+    @State private var showsPlaybackInfo = false
 
     private static let jumpSeconds: TimeInterval = 10
     private static let autoHideDelay: Duration = .seconds(5)
@@ -102,6 +105,15 @@ struct PlayerControlsOverlay: View {
                     .scaleEffect(2)
             }
 
+            if showsPlaybackInfo, let playbackInfo {
+                PlaybackInfoPanel(controller: controller, details: playbackInfo)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .padding(.horizontal, 80)
+                    .padding(.vertical, 60)
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+
             VStack(alignment: .leading, spacing: 0) {
                 header
                     .opacity(controlsVisible ? 1 : 0)
@@ -130,6 +142,7 @@ struct PlayerControlsOverlay: View {
         }
         .animation(.easeInOut(duration: 0.25), value: controlsVisible)
         .animation(.easeInOut(duration: 0.2), value: openPanel)
+        .animation(.easeInOut(duration: 0.2), value: showsPlaybackInfo)
         .onPlayPauseCommand {
             controller.commitScrub()
             controller.togglePlayPause()
@@ -290,6 +303,17 @@ struct PlayerControlsOverlay: View {
                 }
                 .focused($focusedField, equals: .subtitles)
             }
+            
+            Spacer()
+
+            if playbackInfo != nil {
+                Button {
+                    showsPlaybackInfo.toggle()
+                } label: {
+                    Image(systemName: showsPlaybackInfo ? "info.circle.fill" : "info.circle")
+                }
+                .focused($focusedField, equals: .playbackInfo)
+            }
         }
         .font(.system(size: 24, weight: .semibold))
         .focusSection()
@@ -409,7 +433,7 @@ struct PlayerControlsOverlay: View {
 
 // MARK: - Scrubber
 
-private struct ScrubberBar: View {
+struct ScrubberBar: View {
     @ObservedObject var clock: PlaybackClock
     let trickplay: TrickplayProvider?
 
