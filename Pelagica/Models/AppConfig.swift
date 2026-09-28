@@ -79,6 +79,8 @@ struct ItemPageSettings: Decodable {
     var showCollections: Bool?
     var collectionSort: CollectionSortOption?
     var detailBadges: [DetailBadge]?
+    var favoriteButton: [String]?
+    var showWatchlistButton: Bool?
 }
 
 struct MediaBarSection: Decodable {

@@ -13,6 +13,10 @@ struct ItemDetailHeroSection: View {
     let item: BaseItemDto
     let isWatchlist: Bool
     let isTogglingWatchlist: Bool
+    let isFavorite: Bool
+    let isTogglingFavorite: Bool
+    let isPlayed: Bool
+    let isTogglingPlayed: Bool
     let trailerAvailable: Bool
     let playLabel: String
     let namespace: Namespace.ID
@@ -20,6 +24,8 @@ struct ItemDetailHeroSection: View {
     let onPlay: () -> Void
     let onPlayTrailer: () -> Void
     let onToggleWatchlist: () -> Void
+    let onToggleFavorite: () -> Void
+    let onTogglePlayed: () -> Void
 
     var body: some View {
         ZStack(alignment: .center) {
@@ -181,7 +187,7 @@ struct ItemDetailHeroSection: View {
     // MARK: - Actions
 
     private var buttonsRow: some View {
-        HStack(spacing: 20) {
+        FlowLayout(horizontalSpacing: 20, verticalSpacing: 20) {
             Button(action: onPlay) {
                 Label(playLabel, systemImage: "play.fill")
             }
@@ -196,15 +202,50 @@ struct ItemDetailHeroSection: View {
                 .buttonStyle(DetailActionButtonStyle(emphasis: .secondary))
             }
 
-            if item.type == .series || item.type == .movie {
+            if showsWatchlistButton {
                 Button(action: onToggleWatchlist) {
                     Label(isWatchlist ? i18n.t("item:remove_from_watchlist") : i18n.t("item:add_to_watchlist"), systemImage: isWatchlist ? "bookmark.fill" : "bookmark")
                 }
                 .buttonStyle(DetailActionButtonStyle(emphasis: .secondary))
                 .disabled(isTogglingWatchlist)
             }
+
+            if showsFavoriteButton {
+                Button(action: onToggleFavorite) {
+                    Label(isFavorite ? i18n.t("item:unfavorite") : i18n.t("item:favorite"), systemImage: isFavorite ? "heart.fill" : "heart")
+                }
+                .buttonStyle(DetailActionButtonStyle(emphasis: .secondary))
+                .disabled(isTogglingFavorite)
+            }
+
+            if showsPlayedButton {
+                Button(action: onTogglePlayed) {
+                    Label(isPlayed ? i18n.t("item:mark_as_unplayed") : i18n.t("item:mark_as_played"), systemImage: isPlayed ? "checkmark.circle.fill" : "circle")
+                        
+                }
+                .buttonStyle(DetailActionButtonStyle(emphasis: .secondary))
+                .disabled(isTogglingPlayed)
+            }
         }
         .padding(.top, 10)
+    }
+
+    private var isMovieOrSeries: Bool {
+        item.type == .movie || item.type == .series
+    }
+
+    private var showsWatchlistButton: Bool {
+        isMovieOrSeries && configStore.config.itemPage?.showWatchlistButton == true
+    }
+
+    private var showsFavoriteButton: Bool {
+        guard isMovieOrSeries || item.type == .boxSet else { return false }
+        guard let allowedTypes = configStore.config.itemPage?.favoriteButton, let type = item.type else { return true }
+        return allowedTypes.contains(type.rawValue)
+    }
+
+    private var showsPlayedButton: Bool {
+        isMovieOrSeries
     }
 
     // MARK: - Images

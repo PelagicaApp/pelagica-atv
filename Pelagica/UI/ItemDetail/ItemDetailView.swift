@@ -16,6 +16,9 @@ struct ItemDetailView: View {
     @State private var nextEpisode: BaseItemDto?
     @State private var isWatchlist: Bool
     @State private var isTogglingWatchlist = false
+    @State private var isFavorite: Bool
+    @State private var isTogglingFavorite = false
+    @State private var isTogglingPlayed = false
     @State private var similarItems: [BaseItemDto] = []
     @State private var collectionItems: [String: [BaseItemDto]] = [:]
 
@@ -38,6 +41,7 @@ struct ItemDetailView: View {
     init(item: BaseItemDto) {
         _item = State(initialValue: item)
         _isWatchlist = State(initialValue: item.userData?.isLikes ?? false)
+        _isFavorite = State(initialValue: item.userData?.isFavorite ?? false)
     }
 
     var body: some View {
@@ -137,13 +141,19 @@ struct ItemDetailView: View {
             item: item,
             isWatchlist: isWatchlist,
             isTogglingWatchlist: isTogglingWatchlist,
+            isFavorite: isFavorite,
+            isTogglingFavorite: isTogglingFavorite,
+            isPlayed: item.userData?.isPlayed ?? false,
+            isTogglingPlayed: isTogglingPlayed,
             trailerAvailable: !localTrailers.isEmpty || trailerURL != nil,
             playLabel: playLabel,
             namespace: heroNamespace,
             isPlayButtonFocused: $isPlayButtonFocused,
             onPlay: play,
             onPlayTrailer: playTrailer,
-            onToggleWatchlist: toggleWatchlist
+            onToggleWatchlist: toggleWatchlist,
+            onToggleFavorite: toggleFavorite,
+            onTogglePlayed: toggleItemPlayed
         )
     }
 
@@ -211,6 +221,52 @@ struct ItemDetailView: View {
         }
     }
 
+    private func toggleFavorite() {
+        guard let client = appState.client, let id = item.id, !isTogglingFavorite else { return }
+        let newValue = !isFavorite
+        isFavorite = newValue
+        isTogglingFavorite = true
+
+        Task {
+            defer { isTogglingFavorite = false }
+            do {
+                _ = try await client.send(Paths.updateItemUserData(
+                    itemID: id,
+                    userID: appState.currentUser?.id,
+                    UpdateUserItemDataDto(isFavorite: newValue)
+                ))
+            } catch {
+                isFavorite = !newValue
+            }
+        }
+    }
+
+    private func toggleItemPlayed() {
+        guard let client = appState.client, let id = item.id, !isTogglingPlayed else { return }
+        let userID = appState.currentUser?.id
+        let markPlayed = item.userData?.isPlayed != true
+        isTogglingPlayed = true
+
+        Task {
+            defer { isTogglingPlayed = false }
+            do {
+                item.userData = try await client.send(markPlayed
+                    ? Paths.markPlayedItem(itemID: id, userID: userID)
+                    : Paths.markUnplayedItem(itemID: id, userID: userID)
+                ).value
+                appState.notifyWatchStateChanged()
+                if item.type == .series {
+                    if let selectedSeasonID {
+                        await loadEpisodes(seasonID: selectedSeasonID)
+                    }
+                    await loadNextEpisode()
+                }
+            } catch {
+                // The button keeps the previous state.
+            }
+        }
+    }
+
     private func togglePlayed(_ episode: BaseItemDto) {
         guard let client = appState.client, let id = episode.id else { return }
         let userID = appState.currentUser?.id
@@ -242,6 +298,7 @@ struct ItemDetailView: View {
             let full = try await client.send(Paths.getItem(itemID: id, userID: appState.currentUser?.id)).value
             item = full
             isWatchlist = full.userData?.isLikes ?? false
+            isFavorite = full.userData?.isFavorite ?? false
         } catch {
             // The stub data passed in from the grid is enough to render the page.
         }
