@@ -14,6 +14,7 @@ struct SettingsView: View {
     private let icons: [AppIconOption] = [
         AppIconOption(name: nil, assetName: "AppIconDefault", label: i18n.t("sidebar:app_icon_classic")),
         AppIconOption(name: "AppIconPride", assetName: "AppIconPride", label: i18n.t("sidebar:app_icon_pride")),
+        AppIconOption(name: "AppIconLight", assetName: "AppIconLight", label: i18n.t("sidebar:app_icon_classic_light")),
     ]
     
     var body: some View {
