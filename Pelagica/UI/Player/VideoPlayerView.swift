@@ -202,6 +202,7 @@ struct VideoPlayerView: View {
     private func selectAudioTrack(_ stream: MediaStream) {
         guard let index = stream.index, index != selectedAudioStreamIndex else { return }
         selectedAudioStreamIndex = index
+        trackPreferences?.rememberAudio(stream, for: currentItem)
 
         if isTranscoded {
             let ticks = Int(controller.currentSeconds * 10_000_000)
@@ -214,6 +215,7 @@ struct VideoPlayerView: View {
     private func selectSubtitleTrack(_ stream: MediaStream?) {
         guard stream?.index != selectedSubtitleStreamIndex else { return }
         selectedSubtitleStreamIndex = stream?.index
+        trackPreferences?.rememberSubtitle(stream, for: currentItem)
 
         let needsBurnIn = isTranscoded && stream.map(requiresBurnIn) == true
         if needsBurnIn || burnedInSubtitleStreamIndex != nil {
@@ -229,6 +231,10 @@ struct VideoPlayerView: View {
             return
         }
         controller.selectSubtitle(subtitleSelection(for: stream))
+    }
+
+    private var trackPreferences: TrackPreferences? {
+        TrackPreferences(userID: appState.currentUser?.id)
     }
 
     private func requiresBurnIn(_ stream: MediaStream) -> Bool {
@@ -381,10 +387,34 @@ struct VideoPlayerView: View {
             let mediaStreams = mediaSource.mediaStreams ?? []
             audioStreams = mediaStreams.filter { $0.type == .audio }
             subtitleStreams = mediaStreams.filter { $0.type == .subtitle }
-            selectedAudioStreamIndex = audioStreamIndex ?? mediaSource.defaultAudioStreamIndex ?? audioStreams.first?.index
+            let serverAudioIndex = mediaSource.defaultAudioStreamIndex ?? audioStreams.first?.index
+            selectedAudioStreamIndex = audioStreamIndex ?? serverAudioIndex
             if applyServerDefaults {
                 let defaultIndex = mediaSource.defaultSubtitleStreamIndex ?? -1
                 selectedSubtitleStreamIndex = subtitleStreams.contains { $0.index == defaultIndex } ? defaultIndex : nil
+
+                let remembered = trackPreferences?.resolve(for: currentItem, audioStreams: audioStreams, subtitleStreams: subtitleStreams)
+                if let audioIndex = remembered?.audioIndex {
+                    selectedAudioStreamIndex = audioIndex
+                }
+                switch remembered?.subtitle {
+                case .off: selectedSubtitleStreamIndex = nil
+                case .stream(let index): selectedSubtitleStreamIndex = index
+                case nil: break
+                }
+
+                // A transcode bakes in its audio track and image subtitles, so request a new one for remembered choices
+                let rememberedSubtitle = subtitleStreams.first { $0.index == selectedSubtitleStreamIndex }
+                let needsBurnIn = remembered?.subtitle != nil && rememberedSubtitle.map(requiresBurnIn) == true
+                if method == .transcode, selectedAudioStreamIndex != serverAudioIndex || needsBurnIn {
+                    await resolvePlayback(
+                        atTicks: ticks,
+                        audioStreamIndex: selectedAudioStreamIndex,
+                        subtitleStreamIndex: needsBurnIn ? selectedSubtitleStreamIndex : nil,
+                        mediaSourceID: mediaSourceID
+                    )
+                    return
+                }
             }
 
             activeItemID = itemID
