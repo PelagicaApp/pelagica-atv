@@ -31,7 +31,7 @@ This is the Apple TV app for [Pelagica](https://github.com/PelagicaApp/pelagica)
 
 ### App Store
 
-> The app isn't yet available on the App Store yet.
+You can download the app on the [App Store](https://apps.apple.com/app/pelagica/id6811079730).
 
 ### TestFlight
 
