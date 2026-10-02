@@ -30,7 +30,7 @@ struct LibraryItemsView: View {
 
     init(genre: GenreRoute) {
         title = genre.name
-        emptyMessage = "There's nothing in this genre."
+        emptyMessage = i18n.t("library:no_items_genre_description")
         query = .genre(id: genre.id)
         isFilterable = true
     }
@@ -156,15 +156,15 @@ struct LibraryItemsView: View {
 
     private var filterMenu: some View {
         Menu {
-            Picker("Filter", selection: $watchFilter) {
+            Picker(i18n.t("library:filter"), selection: $watchFilter) {
                 Label(i18n.t("live:filter_all"), systemImage: "square.grid.2x2").tag(WatchFilter.all)
-                Label("Unwatched", systemImage: "circle").tag(WatchFilter.unwatched)
-                Label("In Progress", systemImage: "circle.lefthalf.filled").tag(WatchFilter.inProgress)
-                Label("Watched", systemImage: "checkmark.circle.fill").tag(WatchFilter.watched)
+                Label(i18n.t("library:filter_unwatched"), systemImage: "circle").tag(WatchFilter.unwatched)
+                Label(i18n.t("library:filter_in_progress"), systemImage: "circle.lefthalf.filled").tag(WatchFilter.inProgress)
+                Label(i18n.t("library:filter_watched"), systemImage: "checkmark.circle.fill").tag(WatchFilter.watched)
             }
         } label: {
             Label(
-                "Filter",
+                i18n.t("library:filter"),
                 systemImage: watchFilter == .all
                     ? "line.3.horizontal.decrease.circle"
                     : "line.3.horizontal.decrease.circle.fill"
@@ -264,7 +264,7 @@ struct LibraryItemsView: View {
             totalCount = result.totalRecordCount ?? items.count
         } catch is CancellationError {
         } catch {
-            errorMessage = "Couldn't load items."
+            errorMessage = i18n.t("library:load_items_error")
         }
     }
 
