@@ -28,44 +28,46 @@ struct SettingsView: View {
         ZStack {
             PelagicaBackground()
             
-            VStack(alignment: .leading, spacing: 40) {
-                Text(i18n.t("settings:title"))
-                    .font(.system(size: 40, weight: .bold))
-                    .foregroundStyle(.white)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 40) {
+                    Text(i18n.t("settings:title"))
+                        .font(.system(size: 40, weight: .bold))
+                        .foregroundStyle(.white)
                 
-                SettingsSection(title: i18n.t("settings:account_section_title")) {
-                    profileSection
-                }
+                    SettingsSection(title: i18n.t("settings:account_section_title")) {
+                        profileSection
+                    }
                 
-                SettingsSection(title: i18n.t("settings:language_section_title")) {
-                    languageSection
-                }
+                    SettingsSection(title: i18n.t("settings:language_section_title")) {
+                        languageSection
+                    }
                 
-                SettingsSection(title: i18n.t("settings:category_itempage")) {
-                    itemPageSection
-                }
+                    SettingsSection(title: i18n.t("settings:category_itempage")) {
+                        itemPageSection
+                    }
                 
-                SettingsSection(title: i18n.t("sidebar:app_icon")) {
-                    HStack(spacing: 34) {
-                        ForEach(icons) { icon in
-                            AppIconButton(
-                                icon: icon,
-                                isSelected: currentIconName == icon.name
-                            ) {
-                                changeAppIcon(to: icon.name)
+                    SettingsSection(title: i18n.t("sidebar:app_icon")) {
+                        HStack(spacing: 34) {
+                            ForEach(icons) { icon in
+                                AppIconButton(
+                                    icon: icon,
+                                    isSelected: currentIconName == icon.name
+                                ) {
+                                    changeAppIcon(to: icon.name)
+                                }
                             }
-                        }
                         
-                        Spacer()
+                            Spacer()
+                        }
+                    }
+                
+                    SettingsSection(title: i18n.t("settings:about_section_title")) {
+                        aboutSection
                     }
                 }
-                
-                SettingsSection(title: i18n.t("settings:about_section_title")) {
-                    aboutSection
-                }
+                .padding(60)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
-            .padding(60)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
     
