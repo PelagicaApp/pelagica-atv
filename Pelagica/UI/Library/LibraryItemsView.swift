@@ -13,6 +13,7 @@ struct LibraryItemsView: View {
     let title: String
     let emptyMessage: String
     let query: Query
+    let isFilterable: Bool
 
     enum Query {
         case library(id: String?)
@@ -24,18 +25,21 @@ struct LibraryItemsView: View {
         title = library.name ?? i18n.t("item:unknown_library")
         emptyMessage = i18n.t("library:no_items_description")
         query = .library(id: library.id)
+        isFilterable = library.collectionType == .movies || library.collectionType == .tvshows
     }
 
     init(genre: GenreRoute) {
         title = genre.name
         emptyMessage = "There's nothing in this genre."
         query = .genre(id: genre.id)
+        isFilterable = true
     }
 
     init(studio: StudioRoute) {
         title = studio.name
         emptyMessage = i18n.t("library:no_items_description")
         query = .studio(id: studio.id)
+        isFilterable = true
     }
 
     @State private var items: [BaseItemDto] = []
@@ -44,7 +48,25 @@ struct LibraryItemsView: View {
     @State private var errorMessage: String?
     @State private var sortBy: ItemSortBy = .dateCreated
     @State private var sortOrder: JellyfinAPI.SortOrder = .descending
-    @State private var loadedSortKey: String?
+    @State private var watchFilter: WatchFilter = .all
+    @State private var loadedQueryKey: String?
+    @State private var inProgressIDs: [String]?
+
+    enum WatchFilter: String, CaseIterable {
+        case all
+        case unwatched
+        case inProgress
+        case watched
+
+        var itemFilter: ItemFilter? {
+            switch self {
+            case .all: nil
+            case .unwatched: .isUnplayed
+            case .inProgress: .isUnplayed
+            case .watched: .isPlayed
+            }
+        }
+    }
 
     /// How many items from the end of the loaded list trigger fetching the next batch.
     private let prefetchThreshold = 8
@@ -62,13 +84,16 @@ struct LibraryItemsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 32) {
-                    HStack {
+                    HStack(spacing: 24) {
                         Text(title)
                             .font(.system(size: 40, weight: .bold))
                             .foregroundStyle(.white)
 
                         Spacer()
 
+                        if isFilterable {
+                            filterMenu
+                        }
                         sortMenu
                     }
                     .focusSection()
@@ -99,9 +124,11 @@ struct LibraryItemsView: View {
                 .padding(60)
             }
         }
-        .task(id: sortKey) {
-            guard loadedSortKey != sortKey else { return }
+        .task(id: queryKey) {
+            guard loadedQueryKey != queryKey else { return }
             items = []
+            inProgressIDs = nil
+            errorMessage = nil
             totalCount = nil
             isLoadingMore = true
             await loadMore()
@@ -124,6 +151,24 @@ struct LibraryItemsView: View {
             }
         } label: {
             Label(i18n.t("settings:sort_by"), systemImage: "arrow.up.arrow.down")
+        }
+    }
+
+    private var filterMenu: some View {
+        Menu {
+            Picker("Filter", selection: $watchFilter) {
+                Label(i18n.t("live:filter_all"), systemImage: "square.grid.2x2").tag(WatchFilter.all)
+                Label("Unwatched", systemImage: "circle").tag(WatchFilter.unwatched)
+                Label("In Progress", systemImage: "circle.lefthalf.filled").tag(WatchFilter.inProgress)
+                Label("Watched", systemImage: "checkmark.circle.fill").tag(WatchFilter.watched)
+            }
+        } label: {
+            Label(
+                "Filter",
+                systemImage: watchFilter == .all
+                    ? "line.3.horizontal.decrease.circle"
+                    : "line.3.horizontal.decrease.circle.fill"
+            )
         }
     }
 
@@ -166,7 +211,7 @@ struct LibraryItemsView: View {
     }
 
     private func loadMore() async {
-        let requestedSortKey = sortKey
+        let requestedQueryKey = queryKey
         defer { isLoadingMore = false }
         guard let client = appState.client else { return }
         var parameters = Paths.GetItemsParameters(
@@ -176,6 +221,9 @@ struct LibraryItemsView: View {
             sortOrder: [sortOrder],
             sortBy: [sortBy]
         )
+        if let itemFilter = watchFilter.itemFilter {
+            parameters.filters = [itemFilter]
+        }
         switch query {
         case .library(let id):
             guard let id else { return }
@@ -193,10 +241,26 @@ struct LibraryItemsView: View {
             parameters.studioIDs = [id]
         }
         do {
+            if watchFilter == .inProgress {
+                let ids: [String]
+                if let inProgressIDs {
+                    ids = inProgressIDs
+                } else {
+                    ids = try await fetchInProgressIDs(client: client)
+                    guard requestedQueryKey == queryKey else { return }
+                    inProgressIDs = ids
+                }
+                guard !ids.isEmpty else {
+                    loadedQueryKey = requestedQueryKey
+                    totalCount = 0
+                    return
+                }
+                parameters.ids = ids
+            }
             let result = try await client.send(Paths.getItems(parameters: parameters)).value
-            guard requestedSortKey == sortKey else { return }
+            guard requestedQueryKey == queryKey else { return }
             items.append(contentsOf: result.items ?? [])
-            loadedSortKey = requestedSortKey
+            loadedQueryKey = requestedQueryKey
             totalCount = result.totalRecordCount ?? items.count
         } catch is CancellationError {
         } catch {
@@ -204,7 +268,35 @@ struct LibraryItemsView: View {
         }
     }
 
-    private var sortKey: String { "\(sortBy.rawValue)|\(sortOrder.rawValue)" }
+    private func fetchInProgressIDs(client: JellyfinClient) async throws -> [String] {
+        func fetch(types: [BaseItemKind], filter: ItemFilter) async throws -> [BaseItemDto] {
+            var parameters = Paths.GetItemsParameters(userID: appState.currentUser?.id)
+            parameters.isRecursive = true
+            parameters.includeItemTypes = types
+            parameters.filters = [filter]
+            parameters.enableUserData = false
+            parameters.enableImages = false
+            if case .library(let id) = query {
+                parameters.parentID = id
+            }
+            return try await client.send(Paths.getItems(parameters: parameters)).value.items ?? []
+        }
+
+        let resumable = try await fetch(types: [.movie, .episode], filter: .isResumable)
+        let playedEpisodes = try await fetch(types: [.episode], filter: .isPlayed)
+
+        var ids = Set<String>()
+        for item in resumable + playedEpisodes {
+            if item.type == .episode {
+                if let seriesID = item.seriesID { ids.insert(seriesID) }
+            } else if let id = item.id {
+                ids.insert(id)
+            }
+        }
+        return Array(ids)
+    }
+
+    private var queryKey: String { "\(sortBy.rawValue)|\(sortOrder.rawValue)|\(watchFilter.rawValue)" }
 }
 
 #Preview {
