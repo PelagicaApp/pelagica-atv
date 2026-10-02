@@ -152,6 +152,77 @@ struct PelagicaCircleButtonStyle: ButtonStyle {
     }
 }
 
+struct PelagicaToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            configuration.isOn.toggle()
+        } label: {
+            HStack(spacing: 24) {
+                configuration.label
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(.white)
+
+                Spacer()
+
+                PelagicaSwitch(isOn: configuration.isOn)
+            }
+        }
+        .buttonStyle(PelagicaToggleButtonStyle())
+    }
+
+    private struct PelagicaToggleButtonStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            PelagicaToggleButtonBody(configuration: configuration)
+        }
+    }
+
+    private struct PelagicaToggleButtonBody: View {
+        let configuration: ButtonStyleConfiguration
+        @Environment(\.isFocused) private var isFocused
+
+        private let cornerRadius: CGFloat = 16
+
+        var body: some View {
+            configuration.label
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(Color.white.opacity(isFocused ? 0.08 : 0))
+                )
+                .pelagicaFocusRing(isFocused: isFocused, cornerRadius: cornerRadius)
+                .scaleEffect(configuration.isPressed ? 0.99 : 1)
+                .animation(.easeOut(duration: 0.14), value: isFocused)
+        }
+    }
+
+    private struct PelagicaSwitch: View {
+        let isOn: Bool
+        @Environment(\.isEnabled) private var isEnabled
+
+        private let width: CGFloat = 88
+        private let height: CGFloat = 48
+        private let knobInset: CGFloat = 5
+
+        var body: some View {
+            Capsule()
+                .fill(isOn ? Color(white: 0.9) : .white.opacity(0.08))
+                .overlay(
+                    Capsule()
+                        .strokeBorder(Color.white.opacity(isOn ? 0 : 0.35), lineWidth: 1.5)
+                )
+                .overlay(alignment: isOn ? .trailing : .leading) {
+                    Circle()
+                        .fill(isOn ? Color.black : Color.white.opacity(0.7))
+                        .padding(knobInset)
+                }
+                .frame(width: width, height: height)
+                .opacity(isEnabled ? 1 : 0.3)
+                .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isOn)
+        }
+    }
+}
+
 struct PelagicaField: View {
     var placeholder: String
     @Binding var text: String

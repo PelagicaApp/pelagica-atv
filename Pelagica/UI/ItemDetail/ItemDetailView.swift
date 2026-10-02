@@ -30,6 +30,7 @@ struct ItemDetailView: View {
 
     @State private var playbackTarget: PlaybackTarget?
     @State private var localTrailers: [BaseItemDto] = []
+    @State private var themeSong = ThemeSongPlayer()
 
     @Namespace private var heroNamespace
     @Namespace private var seasonsNamespace
@@ -100,6 +101,7 @@ struct ItemDetailView: View {
         .background(PelagicaBackground())
         .task {
             await loadFullItem()
+            await themeSong.play(for: item, appState: appState)
             await loadLocalTrailers()
             await laodSimilarItems()
             if item.type == .series {
@@ -114,6 +116,9 @@ struct ItemDetailView: View {
                     await loadItemCollections()
                 }
             }
+        }
+        .onDisappear {
+            themeSong.stop()
         }
         .fullScreenCover(item: $playbackTarget) { target in
             VideoPlayerView(item: target.item, startTicks: target.startTicks)
@@ -187,6 +192,7 @@ struct ItemDetailView: View {
         if !localTrailers.isEmpty, let firstTrailer = localTrailers.first {
             startPlayback(for: firstTrailer)
         } else if let trailerURL {
+            themeSong.stop()
             openURL(trailerURL)
         }
     }
@@ -197,6 +203,7 @@ struct ItemDetailView: View {
 
     private func startPlayback(for target: BaseItemDto) {
         guard target.id != nil else { return }
+        themeSong.stop()
         let startTicks = target.userData?.playbackPositionTicks ?? 0
         playbackTarget = PlaybackTarget(item: target, startTicks: startTicks)
     }

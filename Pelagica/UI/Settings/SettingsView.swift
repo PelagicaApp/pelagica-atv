@@ -10,6 +10,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
     @State private var currentIconName: String? = UIApplication.shared.alternateIconName
+    @AppStorage(ThemeSongPlayer.enabledDefaultsKey) private var playThemeSongs = true
     
     private let icons: [AppIconOption] = [
         AppIconOption(name: nil, assetName: "AppIconDefault", label: i18n.t("sidebar:app_icon_classic")),
@@ -38,6 +39,10 @@ struct SettingsView: View {
                 
                 SettingsSection(title: i18n.t("settings:language_section_title")) {
                     languageSection
+                }
+                
+                SettingsSection(title: i18n.t("settings:category_itempage")) {
+                    itemPageSection
                 }
                 
                 SettingsSection(title: i18n.t("sidebar:app_icon")) {
@@ -173,6 +178,17 @@ struct SettingsView: View {
     private var currentLanguageLabel: String {
         let label = i18n.supportedLanguages.first { $0.code == i18n.language }?.label ?? i18n.language
         return i18n.languageOverride == nil ? "\(i18n.t("sidebar:system")) (\(label))" : label
+    }
+    
+    // MARK: - Item page section
+    
+    private var itemPageSection: some View {
+        Toggle(isOn: $playThemeSongs) {
+            Text(i18n.t("settings:play_theme_songs_label"))
+        }
+        .toggleStyle(PelagicaToggleStyle())
+        .padding(.horizontal, -20)
+        .padding(.vertical, -14)
     }
     
     // MARK: - App Icon section
