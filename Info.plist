@@ -26,6 +26,8 @@
 		<string>es</string>
 		<string>it</string>
 		<string>ro</string>
+		<string>tr</string>
+		<string>zh</string>
 	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
