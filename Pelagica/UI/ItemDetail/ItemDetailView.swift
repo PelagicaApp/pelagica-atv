@@ -203,7 +203,7 @@ struct ItemDetailView: View {
 
     private func startPlayback(for target: BaseItemDto) {
         guard target.id != nil else { return }
-        themeSong.stop()
+        themeSong.stop(fade: false)
         let startTicks = target.userData?.playbackPositionTicks ?? 0
         playbackTarget = PlaybackTarget(item: target, startTicks: startTicks)
     }

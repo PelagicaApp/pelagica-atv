@@ -18,6 +18,7 @@ final class ThemeSongPlayer {
 
     private var player: AVPlayer?
     private var fadeInTask: Task<Void, Never>?
+    private var isStopped = false
 
     static var isEnabled: Bool {
         UserDefaults.standard.object(forKey: enabledDefaultsKey) as? Bool ?? true
@@ -27,13 +28,14 @@ final class ThemeSongPlayer {
         guard Self.isEnabled, player == nil,
               item.type == .movie || item.type == .series,
               let client = appState.client, let itemID = item.id else { return }
+        isStopped = false
 
         let userID = appState.currentUser?.id
         let songs = try? await client.send(Paths.getThemeSongs(itemID: itemID, parameters: .init(
             userID: userID,
             isInheritFromParent: true
         ))).value.items
-        guard let songID = songs?.first?.id, !Task.isCancelled, player == nil else { return }
+        guard let songID = songs?.first?.id, !Task.isCancelled, !isStopped, player == nil else { return }
 
         let request = Paths.getUniversalAudioStream(itemID: songID, parameters: .init(
             container: ["mp3", "aac", "m4a", "flac", "alac", "wav"],
@@ -52,10 +54,16 @@ final class ThemeSongPlayer {
         }
     }
 
-    func stop() {
+    /// Pass `fade: false` when other playback is about to start, so the two don't overlap
+    func stop(fade: Bool = true) {
+        isStopped = true
         guard let player else { return }
         self.player = nil
         fadeInTask?.cancel()
+        guard fade else {
+            player.pause()
+            return
+        }
         Task {
             await Self.fade(player, to: 0, over: Self.fadeOutDuration)
             player.pause()

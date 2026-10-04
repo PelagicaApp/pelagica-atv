@@ -48,6 +48,8 @@ final class VLCPlayerController: NSObject, ObservableObject {
     private var lastProgressReport: TimeInterval = -.infinity
     /// VLC keeps reporting the pre-seek time for a moment after a seek. Those updates are ignored until it lands near the target (or the deadline passes) so the scrubber doesn't snap back
     private var pendingSeek: (target: TimeInterval, deadline: Date)?
+    /// Bumped on every `load`/`stop` so a late audio session callback doesn't start stale media
+    private var loadGeneration = 0
     /// Kept here because reading `videoAspectRatio` back from VLCKit leaks the returned C string.
     private(set) var aspectRatioOverride: String?
 
@@ -86,8 +88,6 @@ final class VLCPlayerController: NSObject, ObservableObject {
         audioStream: MediaStream?,
         subtitle: SubtitleSelection
     ) {
-        Self.activateAudioSession()
-
         embeddedAudioStreams = mediaStreams.filter { $0.type == .audio && $0.isExternal != true }
         embeddedSubtitleStreams = mediaStreams.filter { $0.type == .subtitle && $0.isExternal != true }
         pendingAudioStream = audioStream
@@ -109,7 +109,12 @@ final class VLCPlayerController: NSObject, ObservableObject {
         }
         player.media = media
         setAspectRatioOverride(displayAspectRatio)
-        player.play()
+        loadGeneration += 1
+        let generation = loadGeneration
+        Self.activateAudioSession { [weak self] in
+            guard let self, self.loadGeneration == generation else { return }
+            self.player.play()
+        }
         UIApplication.shared.isIdleTimerDisabled = true
         activateNowPlaying()
         publishTimeline()
@@ -128,6 +133,7 @@ final class VLCPlayerController: NSObject, ObservableObject {
     }
 
     func stop() {
+        loadGeneration += 1
         player.stop()
         player.media = nil
         nowPlaying.deactivate()
@@ -139,7 +145,7 @@ final class VLCPlayerController: NSObject, ObservableObject {
 
     private static let audioSessionQueue = DispatchQueue(label: "app.pelagica.audio-session", qos: .userInitiated)
 
-    private static func activateAudioSession() {
+    private static func activateAudioSession(completion: @escaping @MainActor () -> Void) {
         let session = AVAudioSession.sharedInstance()
         audioSessionQueue.async {
             do {
@@ -147,28 +153,21 @@ final class VLCPlayerController: NSObject, ObservableObject {
             } catch {
                 print("Pelagica playback: failed to set audio session category: \(error)")
             }
-            if #available(tvOS 27.0, *) {
-                session.activate(options: []) { activated, error in
-                    if !activated { print("Pelagica playback: failed to activate audio session: \(String(describing: error))") }
-                }
-            } else {
-                do {
-                    try session.setActive(true)
-                } catch {
-                    print("Pelagica playback: failed to activate audio session: \(error)")
-                }
+            // The blocking API on purpose: `activate(options:)` doesn't reliably call its completion handler,
+            // and this serial queue keeps activation and deactivation in order
+            do {
+                try session.setActive(true)
+            } catch {
+                print("Pelagica playback: failed to activate audio session: \(error)")
             }
+            DispatchQueue.main.async { completion() }
         }
     }
 
     private static func deactivateAudioSession() {
         let session = AVAudioSession.sharedInstance()
         audioSessionQueue.async {
-            if #available(tvOS 27.0, *) {
-                session.deactivate(options: .notifyOthersOnDeactivation) { _, _ in }
-            } else {
-                try? session.setActive(false, options: .notifyOthersOnDeactivation)
-            }
+            try? session.setActive(false, options: .notifyOthersOnDeactivation)
         }
     }
 
