@@ -125,10 +125,10 @@ struct HomeTabView: View {
     @ViewBuilder
     private func rowView(for row: HomeRow) -> some View {
         switch row.kind {
-        case .poster(let detailText, let useThumb):
+        case .poster(let detailText, let useThumb, let autoPlayTrailers):
             HomeSectionRow(title: row.title) {
                 ForEach(row.items.indices, id: \.self) { index in
-                    ItemCard(item: row.items[index], detailText: detailText, useThumb: useThumb)
+                    ItemCard(item: row.items[index], detailText: detailText, useThumb: useThumb, autoPlayTrailer: autoPlayTrailers)
                         .frame(width: useThumb ? 420 : 280)
                 }
             }
@@ -316,7 +316,11 @@ struct HomeTabView: View {
             return [HomeRow(
                 title: section.title ?? "",
                 items: items,
-                kind: .poster(detailText: { Self.detailFieldsText(for: $0, fields: fields) }, useThumb: useThumb)
+                kind: .poster(
+                    detailText: { Self.detailFieldsText(for: $0, fields: fields) },
+                    useThumb: useThumb,
+                    autoPlayTrailers: useThumb && section.autoPlayTrailers == true
+                )
             )]
 
         case .libraries(let section):
@@ -580,7 +584,7 @@ struct HomeTabView: View {
                             enableUserData: true
                         ))).value
                         guard let items = result.items, !items.isEmpty else { return (index, nil) }
-                        return (index, HomeRow(title: i18n.t("home:recently_added", ["category": name]), items: items, kind: .poster(detailText: Self.defaultDetailText, useThumb: false)))
+                        return (index, HomeRow(title: i18n.t("home:recently_added", ["category": name]), items: items, kind: .poster(detailText: Self.defaultDetailText, useThumb: false, autoPlayTrailers: false)))
                     } catch {
                         return (index, nil)
                     }
@@ -750,7 +754,7 @@ private extension Optional where Wrapped == String {
 }
 
 private enum HomeRowKind {
-    case poster(detailText: (BaseItemDto) -> String, useThumb: Bool)
+    case poster(detailText: (BaseItemDto) -> String, useThumb: Bool, autoPlayTrailers: Bool)
     case continueStyle(titleLine: ContinueWatchingTitleLine?, detailLines: [ContinueWatchingDetailLine]?)
     case library
     case genres([GenreEntry])

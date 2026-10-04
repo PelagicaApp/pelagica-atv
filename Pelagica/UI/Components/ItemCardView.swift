@@ -14,6 +14,8 @@ struct ItemCard: View {
         item.premiereDate.map { String(Calendar.current.component(.year, from: $0)) } ?? ""
     }
     var useThumb: Bool = false
+    /// Plays the items local trailer in the card after it has been focused for a moment
+    var autoPlayTrailer: Bool = false
     /// Streamystats similarity score (0–1)
     var similarity: Double?
 
@@ -21,6 +23,7 @@ struct ItemCard: View {
     private var posterAspectRatio: CGFloat { useThumb ? 16.0 / 9.0 : 2.0 / 3.0 }
 
     @State private var measuredWidth: CGFloat?
+    @FocusState private var isFocused: Bool
     
     var body: some View {
         VStack(alignment: .leading, spacing: 25) {
@@ -33,6 +36,11 @@ struct ItemCard: View {
                         }
                 }
                 .aspectRatio(posterAspectRatio, contentMode: .fit)
+                .overlay {
+                    if autoPlayTrailer {
+                        TrailerPreview(item: item, isActive: isFocused)
+                    }
+                }
                 .overlay(alignment: .topLeading) {
                     if let similarity { similarityBadge(similarity) }
                 }
@@ -40,6 +48,7 @@ struct ItemCard: View {
                 .contentShape(RoundedRectangle(cornerRadius: cornerRadius))
             }
             .buttonStyle(.card)
+            .focused($isFocused)
             
             VStack(alignment: .leading, spacing: 10) {
                 Text(item.name ?? i18n.t("no_title"))

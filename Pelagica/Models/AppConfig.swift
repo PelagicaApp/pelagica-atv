@@ -106,6 +106,8 @@ struct ItemsSection: Decodable {
     var items: SectionItemsConfig?
     var detailFields: [DetailField]?
     var useThumbImage: Bool?
+    /// Only applies together with `useThumbImage`
+    var autoPlayTrailers: Bool?
 }
 
 struct ContinueWatchingSection: Decodable {
@@ -260,6 +262,7 @@ extension AppConfig {
             ),
             detailFields: [.releaseYearAndMonth],
             useThumbImage: true,
+            autoPlayTrailers: true,
         )),
         .recentlyAdded(RecentlyAddedSection(title: "Recently Added", limit: 20)),
     ])
