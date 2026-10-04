@@ -15,12 +15,19 @@ struct HomeMediaBar: View {
     let showWatchlistButton: Bool
     var onButtonFocused: () -> Void = {}
 
+    /// How long each item stays on screen before going to the next one. Zoom is over that duration
+    private static let slideDuration: Double = 25
+    private static let backdropZoom: CGFloat = 1.08
+
+    @Environment(\.scenePhase) private var scenePhase
     @State private var index = 0
     @State private var nextEpisode: BaseItemDto?
     @State private var isFavorite = false
     @State private var isWatchlist = false
     @State private var isTogglingFavorite = false
     @State private var isTogglingWatchlist = false
+    @State private var isScrolledIntoView = true
+    @State private var isOnScreen = false
 
     private enum FocusableButton: Hashable {
         case play, favorite, watchlist, next
@@ -31,6 +38,15 @@ struct HomeMediaBar: View {
 
     private var currentItem: BaseItemDto? {
         items.indices.contains(index) ? items[index] : nil
+    }
+
+    private var shouldAutoAdvance: Bool {
+        items.count > 1 && isOnScreen && isScrolledIntoView && scenePhase == .active
+    }
+
+    private struct AutoAdvanceKey: Equatable {
+        let itemID: String?
+        let isActive: Bool
     }
 
     var body: some View {
@@ -60,6 +76,15 @@ struct HomeMediaBar: View {
             syncUserDataState()
             await loadNextEpisode()
         }
+        .task(id: AutoAdvanceKey(itemID: currentItem?.id, isActive: shouldAutoAdvance)) {
+            guard shouldAutoAdvance else { return }
+            try? await Task.sleep(for: .seconds(Self.slideDuration))
+            guard !Task.isCancelled else { return }
+            advance()
+        }
+        .onScrollVisibilityChange(threshold: 0.5) { isScrolledIntoView = $0 }
+        .onAppear { isOnScreen = true }
+        .onDisappear { isOnScreen = false }
         .onChange(of: focusedButton) { _, newValue in
             if newValue != nil { onButtonFocused() }
         }
@@ -70,7 +95,7 @@ struct HomeMediaBar: View {
     private var backdrop: some View {
         AsyncImage(url: backdropURL) { phase in
             if let image = phase.image {
-                image.resizable().scaledToFill()
+                SlowZoomImage(image: image, zoom: Self.backdropZoom, duration: Self.slideDuration)
             }
         }
     }
@@ -316,6 +341,28 @@ struct HomeMediaBar: View {
             parameters: .init(fillWidth: 800, tag: tag)
         )
         return client.url(with: request, queryAPIKey: true)
+    }
+}
+
+private struct SlowZoomImage: View {
+    let image: Image
+    let zoom: CGFloat
+    let duration: Double
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isZoomed = false
+
+    var body: some View {
+        image
+            .resizable()
+            .scaledToFill()
+            .scaleEffect(isZoomed && !reduceMotion ? zoom : 1)
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.linear(duration: duration)) {
+                    isZoomed = true
+                }
+            }
     }
 }
 
