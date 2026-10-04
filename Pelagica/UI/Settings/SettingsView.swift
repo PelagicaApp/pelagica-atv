@@ -154,20 +154,20 @@ struct SettingsView: View {
             
             Spacer()
             
-            Menu {
-                Picker(i18n.t("settings:language_section_title"), selection: languageSelection) {
-                    Text(i18n.t("sidebar:system"))
-                        .tag(String?.none)
-                    ForEach(i18n.supportedLanguages) { language in
-                        Text(language.label)
-                            .tag(Optional(language.code))
-                    }
-                }
-            } label: {
-                Label(i18n.t("sidebar:select_language"), systemImage: "globe")
-            }
+            PelagicaPicker(
+                title: i18n.t("sidebar:select_language"),
+                selection: languageSelection,
+                options: languageOptions
+            )
             .frame(maxWidth: 400)
         }
+    }
+
+    private var languageOptions: [PelagicaPickerOption<String?>] {
+        [PelagicaPickerOption(value: nil, label: i18n.t("sidebar:system"), leading: "🌐")]
+            + i18n.supportedLanguages.map {
+                PelagicaPickerOption(value: $0.code, label: $0.label, leading: $0.country.flagEmoji)
+            }
     }
     
     private var languageSelection: Binding<String?> {
