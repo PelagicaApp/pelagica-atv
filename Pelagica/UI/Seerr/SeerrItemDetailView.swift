@@ -164,7 +164,18 @@ struct SeerrItemDetailView: View {
         FlowLayout(horizontalSpacing: 20, verticalSpacing: 20) {
             if showsRequestButton {
                 Button(action: request) {
-                    Label(requestLabel, systemImage: "arrow.down.circle")
+                    Label {
+                        Text(requestLabel)
+                    } icon: {
+                        if isRequesting {
+                            ProgressView()
+                                .tint(.white.opacity(0.6))
+                                .scaleEffect(0.6)
+                                .frame(width: 26, height: 26)
+                        } else {
+                            Image(systemName: "arrow.down.circle")
+                        }
+                    }
                 }
                 .buttonStyle(DetailActionButtonStyle(emphasis: .primary))
                 .disabled(isRequesting || (details.mediaType == .tv && selectedSeasons.isEmpty))

@@ -305,22 +305,38 @@ struct DetailActionButtonStyle: ButtonStyle {
         let configuration: ButtonStyleConfiguration
         let emphasis: PelagicaButtonEmphasis
         @Environment(\.isFocused) private var isFocused
+        @Environment(\.isEnabled) private var isEnabled
 
         private let cornerRadius: CGFloat = 16
 
         var body: some View {
             configuration.label
                 .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(emphasis == .primary ? .black : .white)
+                .foregroundStyle(foreground)
                 .padding(.horizontal, 28)
                 .padding(.vertical, 18)
                 .background(
                     RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(emphasis == .primary ? Color(white: 0.9) : Color.white.opacity(0.12))
+                        .fill(fill)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: cornerRadius)
+                                .strokeBorder(Color.white.opacity(isEnabled ? 0 : 0.15), lineWidth: 1.5)
+                        )
                 )
                 .pelagicaFocusRing(isFocused: isFocused, cornerRadius: cornerRadius)
                 .scaleEffect(configuration.isPressed ? 0.97 : (isFocused ? 1.03 : 1))
                 .animation(.easeOut(duration: 0.14), value: isFocused)
+                .animation(.easeOut(duration: 0.2), value: isEnabled)
+        }
+
+        private var foreground: Color {
+            guard isEnabled else { return .white.opacity(0.35) }
+            return emphasis == .primary ? .black : .white
+        }
+
+        private var fill: Color {
+            guard isEnabled else { return .white.opacity(0.05) }
+            return emphasis == .primary ? Color(white: 0.9) : .white.opacity(0.12)
         }
     }
 }
