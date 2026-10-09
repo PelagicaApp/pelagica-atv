@@ -52,6 +52,9 @@ final class AppState: ObservableObject {
     @Published private(set) var isAddingProfile = false
     @Published private(set) var reauthServer: DiscoveredServer?
     @Published private(set) var watchStateVersion = 0
+
+    /// Logs in to Seerr after a password sign-in
+    private(set) var pendingSeerrLogin: Task<Void, Never>?
     
     private let keychain = KeychainStore()
     private let defaults = UserDefaults.standard
@@ -164,7 +167,16 @@ final class AppState: ObservableObject {
     func signIn(server: DiscoveredServer, username: String, password: String) async throws {
         let newClient = JellyfinClient(configuration: makeConfiguration(url: server.url))
         let result = try await newClient.signIn(username: username, password: password)
-        try completeSignIn(client: newClient, result: result, server: server)
+        let profile = try completeSignIn(client: newClient, result: result, server: server)
+
+        pendingSeerrLogin = Task {
+            // Best effort: Seerr not being set up or reachable shouldn't affect the Jellyfin sign-in
+            let config = await PelagicaPluginAPI.fetchConfig(serverURL: server.url)
+            guard let seerrURL = config.seerrURL, !seerrURL.isEmpty,
+                  let session = try? await SeerrAPI.login(seerrURL: seerrURL, username: username, password: password)
+            else { return }
+            SeerrSessionStore.save(session, for: profile.id)
+        }
     }
     
     func initiateQuickConnect(server: DiscoveredServer) async throws -> QuickConnectInitResult? {
@@ -272,6 +284,7 @@ final class AppState: ObservableObject {
     
     private func forget(_ profile: Profile) {
         keychain.deleteToken(forAccount: profile.id.uuidString)
+        SeerrSessionStore.delete(for: profile.id)
         profiles.removeAll { $0.id == profile.id }
         persistProfiles()
     }
@@ -289,7 +302,8 @@ final class AppState: ObservableObject {
     }
     
     /// Saves (or refreshes) the profile for a completed sign-in and makes it the active one.
-    private func completeSignIn(client newClient: JellyfinClient, result: AuthenticationResult, server: DiscoveredServer) throws {
+    @discardableResult
+    private func completeSignIn(client newClient: JellyfinClient, result: AuthenticationResult, server: DiscoveredServer) throws -> Profile {
         guard let user = result.user, let userID = user.id, let token = result.accessToken else {
             throw ConnectionError.noAccessToken
         }
@@ -299,6 +313,7 @@ final class AppState: ObservableObject {
         
         keychain.saveToken(token, forAccount: profile.id.uuidString)
         activate(profile, client: newClient, user: user, serverName: server.name)
+        return profile
     }
     
     /// Makes a profile current, refreshing its cached details from the server's view of the user.

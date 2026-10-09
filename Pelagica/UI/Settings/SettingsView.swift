@@ -9,6 +9,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var seerrStore: SeerrStore
     @State private var currentIconName: String? = UIApplication.shared.alternateIconName
     @AppStorage(ThemeSongPlayer.enabledDefaultsKey) private var playThemeSongs = true
     
@@ -36,6 +37,12 @@ struct SettingsView: View {
                 
                     SettingsSection(title: i18n.t("settings:account_section_title")) {
                         profileSection
+                    }
+                
+                    if seerrStore.isConfigured {
+                        SettingsSection(title: i18n.t("settings:seerr_integration")) {
+                            seerrSection
+                        }
                     }
                 
                     SettingsSection(title: i18n.t("settings:language_section_title")) {
@@ -126,6 +133,7 @@ struct SettingsView: View {
             .frame(maxWidth: 320)
             
             Button {
+                seerrStore.logout()
                 appState.signOut()
             } label: {
                 Text(i18n.t("sidebar:logout"))
@@ -142,6 +150,51 @@ struct SettingsView: View {
             tag: tag
         ))
         return client.url(with: request, queryAPIKey: true)
+    }
+    
+    // MARK: - Seerr section
+    
+    private var seerrSection: some View {
+        HStack(spacing: 15) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(seerrStatusText)
+                    .foregroundStyle(.white)
+                    .font(.system(size: 28, weight: .semibold))
+                    .lineLimit(1)
+                
+                if let seerrURL = seerrStore.seerrURL {
+                    Text(seerrURL)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            
+            Spacer()
+            
+            if seerrStore.isLoggedIn {
+                Button {
+                    seerrStore.logout()
+                } label: {
+                    Text(i18n.t("sidebar:seerr_logout_action"))
+                }
+                .buttonStyle(PelagicaButtonStyle(emphasis: .secondary))
+                .frame(maxWidth: 400)
+            } else {
+                NavigationLink {
+                    SeerrLoginView()
+                } label: {
+                    Text(i18n.t("sidebar:seerr_login_action"))
+                }
+                .buttonStyle(PelagicaButtonStyle(emphasis: .primary))
+                .frame(maxWidth: 250)
+            }
+        }
+    }
+    
+    private var seerrStatusText: String {
+        guard seerrStore.isLoggedIn else { return i18n.t("sidebar:seerr_not_connected") }
+        guard let name = seerrStore.user?.displayName, !name.isEmpty else { return i18n.t("sidebar:seerr_connected") }
+        return "\(i18n.t("sidebar:seerr_connected")) ⋅ \(name)"
     }
     
     // MARK: - Language section

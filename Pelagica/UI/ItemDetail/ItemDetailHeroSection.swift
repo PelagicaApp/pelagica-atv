@@ -26,6 +26,7 @@ struct ItemDetailHeroSection: View {
     let onToggleWatchlist: () -> Void
     let onToggleFavorite: () -> Void
     let onTogglePlayed: () -> Void
+    var seerrRoute: SeerrItemRoute?
 
     var body: some View {
         ZStack(alignment: .center) {
@@ -225,6 +226,13 @@ struct ItemDetailHeroSection: View {
                 }
                 .buttonStyle(DetailActionButtonStyle(emphasis: .secondary))
                 .disabled(isTogglingPlayed)
+            }
+
+            if let seerrRoute {
+                NavigationLink(value: seerrRoute) {
+                    Label(i18n.t("seerr:seerr_button_label"), systemImage: "arrow.down.circle")
+                }
+                .buttonStyle(DetailActionButtonStyle(emphasis: .secondary))
             }
         }
         .padding(.top, 10)

@@ -10,6 +10,7 @@ import SwiftUI
 struct HomeTabView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var configStore: AppConfigStore
+    @EnvironmentObject private var seerrStore: SeerrStore
 
     @State private var slots: [HomeSlot] = []
     @State private var isLoadingConfig = true
@@ -78,12 +79,7 @@ struct HomeTabView: View {
                 }
             }
             .ignoresSafeArea(edges: hasMediaBarSection ? [.top, .horizontal] : [])
-            .navigationDestination(for: ItemDetailRoute.self) { route in
-                ItemDetailView(item: route.item)
-            }
-            .navigationDestination(for: PersonDetailRoute.self) { route in
-                PersonDetailView(route: route)
-            }
+            .pelagicaDestinations()
             .navigationDestination(for: GenreRoute.self) { route in
                 LibraryItemsView(genre: route)
             }
@@ -95,7 +91,8 @@ struct HomeTabView: View {
             }
         }
         .onDisappear { path = NavigationPath() }
-        .task { await loadHome() }
+        // Reloads when Seerr is logged in or out from Settings, so its rows appear or disappear
+        .task(id: seerrStore.isLoggedIn) { await loadHome() }
         .onChange(of: appState.watchStateVersion) {
             Task { await refreshProgressRows() }
         }
@@ -182,6 +179,14 @@ struct HomeTabView: View {
                 }
                 HomeStudiosMoreCard()
                     .frame(width: 420)
+            }
+
+        case .seerr(let items):
+            HomeSectionRow(title: row.title) {
+                ForEach(items) { item in
+                    SeerrItemCard(item: item)
+                        .frame(width: 280)
+                }
             }
         }
     }
@@ -362,8 +367,26 @@ struct HomeTabView: View {
                 )
             )]
 
+        case .seerrDiscover(let section):
+            let variant = section.variant
+            let items = await seerrStore.items { try await $0.discover(variant) }
+            guard !items.isEmpty else { return [] }
+            return [HomeRow(
+                title: section.title.orDefault(Self.seerrDiscoverTitle(variant)),
+                items: [],
+                kind: .seerr(items)
+            )]
+
         case .mediaBar, .unsupported:
             return []
+        }
+    }
+
+    nonisolated private static func seerrDiscoverTitle(_ variant: SeerrDiscoverVariant) -> String {
+        switch variant {
+        case .trending: i18n.t("home:seerr_trending")
+        case .popularMovies: i18n.t("home:seerr_popular_movies")
+        case .popularSeries: i18n.t("home:seerr_popular_series")
         }
     }
 
@@ -605,7 +628,7 @@ struct HomeTabView: View {
             return .landscape
         case .items(let section):
             return section.useThumbImage == true ? .landscape : .poster
-        case .recentlyAdded, .streamystatsRecommended, .mediaBar, .unsupported:
+        case .recentlyAdded, .streamystatsRecommended, .seerrDiscover, .mediaBar, .unsupported:
             return .poster
         }
     }
@@ -628,6 +651,8 @@ struct HomeTabView: View {
             return section.title.orDefault(i18n.t("studios"))
         case .streamystatsRecommended(let section):
             return section.title.orDefault(i18n.t("home:recommended_for_you"))
+        case .seerrDiscover(let section):
+            return section.title.orDefault(seerrDiscoverTitle(section.variant))
         case .recentlyAdded, .mediaBar, .unsupported:
             return nil
         }
@@ -760,6 +785,7 @@ private enum HomeRowKind {
     case genres([GenreEntry])
     case studios([StudioEntry])
     case recommended([StreamystatsRecommendation], showSimilarity: Bool)
+    case seerr([SeerrMediaItem])
 }
 
 private struct HomeRow: Identifiable {
@@ -773,6 +799,7 @@ private struct HomeRow: Identifiable {
         case .genres(let genres): return genres.isEmpty
         case .studios(let studios): return studios.isEmpty
         case .recommended(let recommendations, _): return recommendations.isEmpty
+        case .seerr(let items): return items.isEmpty
         default: return items.isEmpty
         }
     }
@@ -795,4 +822,5 @@ private struct HomeSlot: Identifiable {
     HomeTabView()
         .environmentObject(AppState())
         .environmentObject(AppConfigStore())
+        .environmentObject(SeerrStore())
 }

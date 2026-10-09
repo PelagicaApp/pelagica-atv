@@ -9,11 +9,13 @@ import Get
 
 struct SearchTabView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var seerrStore: SeerrStore
     
     @Namespace private var namespace
     @FocusState private var isGridFocused: Bool
     
     @State private var results: [BaseItemDto] = []
+    @State private var seerrResults: [SeerrMediaItem] = []
     @State private var errorMessage: String?
     @State private var isLoading = false
     @State private var path = NavigationPath()
@@ -33,7 +35,7 @@ struct SearchTabView: View {
                         if let errorMessage {
                             Text(errorMessage)
                                 .foregroundStyle(.secondary)
-                        } else if isLoading && results.isEmpty {
+                        } else if isLoading && results.isEmpty && seerrResults.isEmpty {
                             LazyVGrid(columns: columns, spacing: 60) {
                                 ForEach(0..<10, id: \.self) { _ in
                                     SkeletonView()
@@ -42,29 +44,30 @@ struct SearchTabView: View {
                                 }
                             }
                             .focusSection()
-                        } else if results.isEmpty {
+                        } else if results.isEmpty && seerrResults.isEmpty {
                             emptyState
                                 .focusSection()
                         } else {
-                            LazyVGrid(columns: columns, spacing: 60) {
-                                ForEach(results.indices, id: \.self) { index in
-                                    ItemCard(item: results[index])
-                                        .prefersDefaultFocus(index == 0, in: namespace)
+                            if !results.isEmpty {
+                                LazyVGrid(columns: columns, spacing: 60) {
+                                    ForEach(results.indices, id: \.self) { index in
+                                        ItemCard(item: results[index])
+                                            .prefersDefaultFocus(index == 0, in: namespace)
+                                    }
                                 }
+                                .focusScope(namespace)
+                                .focusSection()
                             }
-                            .focusScope(namespace)
-                            .focusSection()
+
+                            if !seerrResults.isEmpty {
+                                seerrSection
+                            }
                         }
                     }
                     .padding(60)
                 }
             }
-            .navigationDestination(for: PersonDetailRoute.self) { route in
-                PersonDetailView(route: route)
-            }
-            .navigationDestination(for: ItemDetailRoute.self) { route in
-                ItemDetailView(item: route.item)
-            }
+            .pelagicaDestinations()
             .searchable(text: $query, prompt: i18n.t("search"))
         }
         .onDisappear { path = NavigationPath() }
@@ -73,10 +76,29 @@ struct SearchTabView: View {
             guard !Task.isCancelled else { return }
 
             results = []
+            seerrResults = []
             isLoading = true
+            async let seerrSearch: Void = searchSeerr()
             await search()
+            await seerrSearch
             isLoading = false
         }
+    }
+
+    private var seerrSection: some View {
+        VStack(alignment: .leading, spacing: 32) {
+            Text(i18n.t("search:group_seerr"))
+                .font(.system(size: 36, weight: .semibold))
+                .foregroundStyle(.white)
+
+            LazyVGrid(columns: columns, spacing: 60) {
+                ForEach(seerrResults) { item in
+                    SeerrItemCard(item: item)
+                }
+            }
+        }
+        .padding(.top, results.isEmpty ? 0 : 40)
+        .focusSection()
     }
 
     private var emptyState: some View {
@@ -97,6 +119,14 @@ struct SearchTabView: View {
         .padding(.top, 100)
     }
     
+    private func searchSeerr() async {
+        let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return }
+        let items = await seerrStore.items { try await $0.search(query: query) }
+        guard !Task.isCancelled else { return }
+        seerrResults = items.filter { $0.status != .available }
+    }
+
     private func search() async {
         guard let client = appState.client else { return }
         do {
@@ -120,4 +150,5 @@ struct SearchTabView: View {
 
 #Preview {
     SearchTabView()
+        .environmentObject(SeerrStore())
 }

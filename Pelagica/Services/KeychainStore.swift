@@ -6,9 +6,14 @@
 import Foundation
 import Security
 
-/// Stores Jellyfin access tokens in the Keychain, keyed by an account string (a profile ID).
+/// Stores secrets in the Keychain, keyed by an account string (a profile ID).
+/// Defaults to the Jellyfin access token service.
 struct KeychainStore {
-    private let service = "app.pelagica.atv.Pelagica.accessToken"
+    private let service: String
+
+    init(service: String = "app.pelagica.atv.Pelagica.accessToken") {
+        self.service = service
+    }
 
     func saveToken(_ token: String, forAccount account: String) {
         deleteToken(forAccount: account)

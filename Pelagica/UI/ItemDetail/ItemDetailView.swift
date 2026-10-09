@@ -10,6 +10,7 @@ import SwiftUI
 struct ItemDetailView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var configStore: AppConfigStore
+    @EnvironmentObject private var seerrStore: SeerrStore
     @Environment(\.openURL) private var openURL
 
     @State private var item: BaseItemDto
@@ -21,6 +22,7 @@ struct ItemDetailView: View {
     @State private var isTogglingPlayed = false
     @State private var similarItems: [BaseItemDto] = []
     @State private var collectionItems: [String: [BaseItemDto]] = [:]
+    @State private var seerrRecommendations: [SeerrMediaItem] = []
 
     @State private var seasons: [BaseItemDto] = []
     @State private var selectedSeasonID: String?
@@ -93,6 +95,10 @@ struct ItemDetailView: View {
                     if !similarItems.isEmpty {
                         ItemDetailSimilarSection(items: similarItems, namespace: similarNamespace)
                     }
+
+                    if !seerrRecommendations.isEmpty {
+                        SeerrItemsRow(title: i18n.t("item:recommendations"), items: seerrRecommendations)
+                    }
                 }
                 .padding(.bottom, 60)
             }
@@ -104,6 +110,7 @@ struct ItemDetailView: View {
             await themeSong.play(for: item, appState: appState)
             await loadLocalTrailers()
             await laodSimilarItems()
+            await loadSeerrRecommendations()
             if item.type == .series {
                 await loadNextEpisode()
                 await loadSeasons()
@@ -158,8 +165,23 @@ struct ItemDetailView: View {
             onPlayTrailer: playTrailer,
             onToggleWatchlist: toggleWatchlist,
             onToggleFavorite: toggleFavorite,
-            onTogglePlayed: toggleItemPlayed
+            onTogglePlayed: toggleItemPlayed,
+            seerrRoute: seerrRoute
         )
+    }
+
+    private var seerrRoute: SeerrItemRoute? {
+        guard seerrStore.isLoggedIn, let mediaType = seerrMediaType,
+              let tmdbID = item.providerIDs?["Tmdb"].flatMap(Int.init) else { return nil }
+        return SeerrItemRoute(tmdbID: tmdbID, mediaType: mediaType, title: item.name)
+    }
+
+    private var seerrMediaType: SeerrMediaType? {
+        switch item.type {
+        case .movie: .movie
+        case .series: .tv
+        default: nil
+        }
     }
 
     private var playLabel: String {
@@ -399,6 +421,13 @@ struct ItemDetailView: View {
         }
     }
 
+    private func loadSeerrRecommendations() async {
+        guard let route = seerrRoute else { return }
+        seerrRecommendations = await seerrStore.items {
+            try await $0.recommendations(mediaType: route.mediaType, tmdbID: route.tmdbID)
+        }
+    }
+
     private func loadItemCollections() async {
         guard let client = appState.client, let itemID = item.id else { return }
         let sort = configStore.config.itemPage?.collectionSort ?? .premiereDateAsc
@@ -440,4 +469,5 @@ struct ItemDetailView: View {
     ItemDetailView(item: BaseItemDto(name: "Preview Item", overview: "A short preview overview."))
         .environmentObject(AppState())
         .environmentObject(AppConfigStore())
+        .environmentObject(SeerrStore())
 }

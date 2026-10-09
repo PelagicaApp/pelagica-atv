@@ -29,17 +29,6 @@ nonisolated enum StreamystatsAPI {
         let name: String?
     }
 
-    private static func baseURLComponents(from string: String) -> URLComponents? {
-        var value = string.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let match = value.firstMatch(of: #/^(https?):/*/#.ignoresCase()) {
-            value = "\(match.1.lowercased())://" + value[match.range.upperBound...]
-        } else if !value.contains("://") {
-            value = "https://" + value
-        }
-        guard let components = URLComponents(string: value), components.host?.isEmpty == false else { return nil }
-        return components
-    }
-
     /// Fetches recommendations from Streamystats and resolves them to full Jellyfin items, keeping Streamystats' order.
     static func fetchRecommendations(
         streamystatsURL: String,
@@ -51,7 +40,7 @@ nonisolated enum StreamystatsAPI {
         guard
             let token = client.accessToken,
             let serverHost = client.configuration.url.host(),
-            var components = baseURLComponents(from: streamystatsURL)
+            var components = ServiceURL.components(from: streamystatsURL)
         else { return [] }
 
         components.path = "/api/recommendations"

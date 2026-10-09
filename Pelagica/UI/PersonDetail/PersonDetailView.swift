@@ -9,12 +9,14 @@ import SwiftUI
 
 struct PersonDetailView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var seerrStore: SeerrStore
 
     let route: PersonDetailRoute
 
     @State private var person: BaseItemDto?
     @State private var filmography: [BaseItemDto] = []
     @State private var isLoadingFilmography = true
+    @State private var seerrCredits: [SeerrMediaItem] = []
     @State private var isShowingBiography = false
 
     @Namespace private var heroNamespace
@@ -34,6 +36,11 @@ struct PersonDetailView: View {
                         .focusSection()
 
                     filmographySection
+
+                    if !seerrCredits.isEmpty {
+                        SeerrItemsRow(title: i18n.t("item:known_for"), items: seerrCredits)
+                            .padding(.horizontal, -90)
+                    }
                 }
                 .padding(.horizontal, 90)
                 .padding(.vertical, 60)
@@ -47,6 +54,7 @@ struct PersonDetailView: View {
         .task {
             await loadPerson()
             await loadFilmography()
+            await loadSeerrCredits()
         }
         .sheet(isPresented: $isShowingBiography) {
             biographySheet
@@ -231,6 +239,11 @@ struct PersonDetailView: View {
         }
     }
 
+    private func loadSeerrCredits() async {
+        guard let tmdbID = person?.providerIDs?["Tmdb"], !tmdbID.isEmpty else { return }
+        seerrCredits = await seerrStore.items { try await $0.combinedCredits(personTmdbID: tmdbID) }
+    }
+
     // MARK: - Images
 
     private var portraitURL: URL? {
@@ -261,4 +274,5 @@ struct PersonDetailView: View {
 #Preview {
     PersonDetailView(route: PersonDetailRoute(id: "preview", name: "Preview Person"))
         .environmentObject(AppState())
+        .environmentObject(SeerrStore())
 }

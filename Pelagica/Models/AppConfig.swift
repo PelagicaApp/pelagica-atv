@@ -159,6 +159,27 @@ struct StudiosSection: Decodable {
     var limit: Int?
 }
 
+struct SeerrDiscoverSection: Decodable {
+    var title: String?
+    var variant: SeerrDiscoverVariant = .trending
+
+    private enum CodingKeys: String, CodingKey {
+        case title, variant
+    }
+
+    init(title: String? = nil, variant: SeerrDiscoverVariant = .trending) {
+        self.title = title
+        self.variant = variant
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+        variant = (try? container.decodeIfPresent(String.self, forKey: .variant))
+            .flatMap(SeerrDiscoverVariant.init(rawValue:)) ?? .trending
+    }
+}
+
 enum HomeScreenSection: Decodable {
     case mediaBar(MediaBarSection)
     case recentlyAdded(RecentlyAddedSection)
@@ -170,6 +191,7 @@ enum HomeScreenSection: Decodable {
     case genres(GenresSection)
     case studios(StudiosSection)
     case streamystatsRecommended(RecommendedItemsSection)
+    case seerrDiscover(SeerrDiscoverSection)
     case unsupported
 
     private enum CodingKeys: String, CodingKey {
@@ -195,6 +217,7 @@ enum HomeScreenSection: Decodable {
         case "genres": self = .genres(try GenresSection(from: decoder))
         case "studios": self = .studios(try StudiosSection(from: decoder))
         case "streamystatsRecommended": self = .streamystatsRecommended(try RecommendedItemsSection(from: decoder))
+        case "seerrDiscover": self = .seerrDiscover(try SeerrDiscoverSection(from: decoder))
         default: self = .unsupported
         }
     }
@@ -204,10 +227,12 @@ struct AppConfig: Decodable {
     var homeScreenSections: [HomeScreenSection]?
     var itemPage: ItemPageSettings?
     var streamystatsURL: String?
+    var seerrURL: String?
 
     enum CodingKeys: String, CodingKey {
         case homeScreenSections, itemPage
         case streamystatsURL = "streamystatsUrl"
+        case seerrURL = "seerrUrl"
     }
 }
 
