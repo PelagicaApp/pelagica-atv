@@ -142,14 +142,15 @@ struct HomeTabView: View {
                 }
             }
 
-        case .continueStyle(let titleLine, let detailLines):
+        case .continueStyle(let titleLine, let detailLines, let useSeriesImage):
             HomeSectionRow(title: row.title) {
                 ForEach(row.items.indices, id: \.self) { index in
                     let item = row.items[index]
                     ContinueWatchingCard(
                         item: item,
                         titleText: Self.titleLineText(for: item, titleLine: titleLine),
-                        detailText: Self.detailLineText(for: item, lines: detailLines)
+                        detailText: Self.detailLineText(for: item, lines: detailLines),
+                        useSeriesImage: useSeriesImage
                     )
                     .frame(width: 420)
                 }
@@ -292,7 +293,7 @@ struct HomeTabView: View {
             return [HomeRow(
                 title: section.title.orDefault(i18n.t("home:continue_watching")),
                 items: items,
-                kind: .continueStyle(titleLine: section.titleLine, detailLines: section.detailLine)
+                kind: .continueStyle(titleLine: section.titleLine, detailLines: section.detailLine, useSeriesImage: section.useSeriesImage ?? false)
             )]
 
         case .nextUp(let section):
@@ -300,7 +301,7 @@ struct HomeTabView: View {
             return [HomeRow(
                 title: section.title.orDefault(i18n.t("home:next_up")),
                 items: items,
-                kind: .continueStyle(titleLine: section.titleLine, detailLines: section.detailLine)
+                kind: .continueStyle(titleLine: section.titleLine, detailLines: section.detailLine, useSeriesImage: section.useSeriesImage ?? false)
             )]
             
         case .resume(let section):
@@ -308,7 +309,7 @@ struct HomeTabView: View {
             return [HomeRow(
                 title: section.title.orDefault(i18n.t("resume")),
                 items: items,
-                kind: .continueStyle(titleLine: section.titleLine, detailLines: section.detailLine)
+                kind: .continueStyle(titleLine: section.titleLine, detailLines: section.detailLine, useSeriesImage: section.useSeriesImage ?? false)
             )]
 
         case .recentlyAdded(let section):
@@ -780,7 +781,7 @@ private extension Optional where Wrapped == String {
 
 private enum HomeRowKind {
     case poster(detailText: (BaseItemDto) -> String, useThumb: Bool, autoPlayTrailers: Bool)
-    case continueStyle(titleLine: ContinueWatchingTitleLine?, detailLines: [ContinueWatchingDetailLine]?)
+    case continueStyle(titleLine: ContinueWatchingTitleLine?, detailLines: [ContinueWatchingDetailLine]?, useSeriesImage: Bool)
     case library
     case genres([GenreEntry])
     case studios([StudioEntry])

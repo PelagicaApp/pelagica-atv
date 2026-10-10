@@ -115,6 +115,7 @@ struct ContinueWatchingSection: Decodable {
     var titleLine: ContinueWatchingTitleLine?
     var detailLine: [ContinueWatchingDetailLine]?
     var limit: Int?
+    var useSeriesImage: Bool?
 }
 
 struct NextUpSection: Decodable {
@@ -122,6 +123,7 @@ struct NextUpSection: Decodable {
     var titleLine: ContinueWatchingTitleLine?
     var detailLine: [ContinueWatchingDetailLine]?
     var limit: Int?
+    var useSeriesImage: Bool?
 }
 
 struct ResumeSection: Decodable {
@@ -129,6 +131,7 @@ struct ResumeSection: Decodable {
     var titleLine: ContinueWatchingTitleLine?
     var detailLine: [ContinueWatchingDetailLine]?
     var limit: Int?
+    var useSeriesImage: Bool?
 }
 
 struct LibrariesSection: Decodable {

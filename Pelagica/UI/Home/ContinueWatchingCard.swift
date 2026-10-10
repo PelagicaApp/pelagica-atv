@@ -12,6 +12,7 @@ struct ContinueWatchingCard: View {
     let item: BaseItemDto
     let titleText: String
     let detailText: String
+    var useSeriesImage = false
 
     private let cornerRadius: CGFloat = 12
     private let aspectRatio: CGFloat = 16.0 / 9.0
@@ -107,29 +108,42 @@ struct ContinueWatchingCard: View {
     }
 
     private var imageURL: URL? {
-        guard let id = item.id, let client = appState.client, let measuredWidth else { return nil }
+        guard let client = appState.client, let measuredWidth else { return nil }
 
         let pixelWidth = Int((measuredWidth * displayScale).rounded())
         let pixelHeight = Int((measuredWidth * displayScale / aspectRatio).rounded())
 
-        let imageType: ImageType
-        let tag: String?
-        if let thumbTag = item.imageTags?["Thumb"] {
-            imageType = .thumb
-            tag = thumbTag
-        } else if let backdropTag = item.backdropImageTags?.first {
-            imageType = .backdrop
-            tag = backdropTag
-        } else {
-            imageType = .primary
-            tag = item.imageTags?["Primary"]
-        }
+        guard let source = (useSeriesImage ? seriesImageSource : nil) ?? itemImageSource else { return nil }
 
         let request = Paths.getItemImage(
-            itemID: id,
-            imageType: imageType.rawValue,
-            parameters: .init(fillWidth: pixelWidth, fillHeight: pixelHeight, tag: tag)
+            itemID: source.itemID,
+            imageType: source.imageType.rawValue,
+            parameters: .init(fillWidth: pixelWidth, fillHeight: pixelHeight, tag: source.tag)
         )
         return client.url(with: request, queryAPIKey: true)
+    }
+
+    private var itemImageSource: (itemID: String, imageType: ImageType, tag: String?)? {
+        guard let id = item.id else { return nil }
+        if let thumbTag = item.imageTags?["Thumb"] {
+            return (id, .thumb, thumbTag)
+        } else if let backdropTag = item.backdropImageTags?.first {
+            return (id, .backdrop, backdropTag)
+        } else {
+            return (id, .primary, item.imageTags?["Primary"])
+        }
+    }
+
+    /// Series thumb or backdrop for episodes, nil when the item has none
+    private var seriesImageSource: (itemID: String, imageType: ImageType, tag: String?)? {
+        guard item.type == .episode else { return nil }
+        if let seriesID = item.seriesID, let thumbTag = item.seriesThumbImageTag {
+            return (seriesID, .thumb, thumbTag)
+        } else if let thumbItemID = item.parentThumbItemID, let thumbTag = item.parentThumbImageTag {
+            return (thumbItemID, .thumb, thumbTag)
+        } else if let backdropItemID = item.parentBackdropItemID, let backdropTag = item.parentBackdropImageTags?.first {
+            return (backdropItemID, .backdrop, backdropTag)
+        }
+        return nil
     }
 }
