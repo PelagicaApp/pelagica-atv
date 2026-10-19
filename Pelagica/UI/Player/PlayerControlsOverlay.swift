@@ -132,10 +132,12 @@ struct PlayerControlsOverlay: View {
                             Label(activeSkipSegment.kind.title, systemImage: "forward.fill")
                         }
                         .focused($focusedField, equals: .skip)
+                        .disabled(openPanel != nil)
                         .padding(.bottom, 32)
                     }
                 }
                 transportBar
+                    .disabled(openPanel != nil)
             }
             .padding(.horizontal, 80)
             .padding(.vertical, 60)
@@ -176,7 +178,12 @@ struct PlayerControlsOverlay: View {
             scheduleAutoHide()
             if field == nil {
                 Task { @MainActor in
-                    if focusedField == nil { focusedField = .scrubber }
+                    guard focusedField == nil else { return }
+                    if let openPanel {
+                        focusedField = .trackOption(initialRow(for: openPanel))
+                    } else {
+                        focusedField = .scrubber
+                    }
                 }
             }
         }
@@ -351,6 +358,7 @@ struct PlayerControlsOverlay: View {
         .frame(maxHeight: 560)
         .fixedSize(horizontal: false, vertical: true)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24))
+        .clipped()
         .focusSection()
     }
 
@@ -377,18 +385,24 @@ struct PlayerControlsOverlay: View {
             return
         }
         openPanel = panel
-        let selected = selectedIndex(for: panel)
-        let hasSelectedRow = trackOptions(for: panel).contains { $0.streamIndex == selected }
-        let firstRow = trackOptions(for: panel).first?.streamIndex
+        let row = initialRow(for: panel)
         // Defer until the panel's rows exist, otherwise the focus request is dropped.
         Task { @MainActor in
-            focusedField = .trackOption(hasSelectedRow ? selected : firstRow)
+            focusedField = .trackOption(row)
         }
+    }
+
+    private func initialRow(for panel: TrackPanel) -> Int? {
+        let options = trackOptions(for: panel)
+        let selected = selectedIndex(for: panel)
+        return options.contains { $0.streamIndex == selected } ? selected : options.first?.streamIndex
     }
 
     private func closePanel(_ panel: TrackPanel) {
         openPanel = nil
-        focusedField = panel == .audio ? .audio : .subtitles
+        Task { @MainActor in
+            focusedField = panel == .audio ? .audio : .subtitles
+        }
     }
 
     private func select(_ option: TrackOption, in panel: TrackPanel) {
