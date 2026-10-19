@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/PelagicaApp/i18n",
       "state" : {
-        "revision" : "78c1bf9a9e0a2b1ce8f77bd0d36741f0bbb47645",
-        "version" : "1.0.11"
+        "revision" : "8fe62b6fab06c5874ec8241adbce7ae1ebba55f5",
+        "version" : "1.0.12"
       }
     },
     {

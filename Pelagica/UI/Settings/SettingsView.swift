@@ -34,7 +34,7 @@ struct SettingsView: View {
                     Text(i18n.t("settings:title"))
                         .font(.system(size: 40, weight: .bold))
                         .foregroundStyle(.white)
-                
+
                     SettingsSection(title: i18n.t("settings:account_section_title")) {
                         profileSection
                     }
@@ -71,6 +71,8 @@ struct SettingsView: View {
                             Spacer()
                         }
                     }
+                    
+                    configurationNotice
                 
                     SettingsSection(title: i18n.t("settings:about_section_title")) {
                         aboutSection
@@ -88,6 +90,26 @@ struct SettingsView: View {
         return "\(version) (\(build))"
     }
     
+    // MARK: - Configuration notice
+
+    private var configurationNotice: some View {
+        HStack(alignment: .center, spacing: 20) {
+            Image(systemName: "info.circle.fill")
+                .font(.system(size: 32))
+                .foregroundStyle(.white)
+
+            Text(i18n.t("settings:configuration_notice", ["url": "https://pelagica.app/docs/configuration"]))
+                .foregroundStyle(.secondary)
+                .font(.system(size: 24))
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 28)
+        .padding(.vertical, 24)
+        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 20))
+    }
+
     // MARK: - About section
     
     private var aboutSection: some View {
