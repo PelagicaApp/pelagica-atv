@@ -65,12 +65,15 @@ struct PlayerControlsOverlay: View {
     @State private var scrubGeneration = 0
     @State private var holdDirection: MoveCommandDirection?
     @State private var showsPlaybackInfo = false
+    @State private var touchScrubActivity: ContinuousClock.Instant?
+    @State private var isTouchScrubbing = false
 
     private static let jumpSeconds: TimeInterval = 10
     private static let autoHideDelay: Duration = .seconds(5)
     /// How long the scrub position rests before it's committed
     private static let scrubCommitDelay: Duration = .seconds(0.8)
     private static let holdTickInterval: Duration = .milliseconds(200)
+    private static let swipeMoveCommandGrace: Duration = .milliseconds(400)
 
     /// Seconds to move per tick while an arrow is held, speeding up the longer it's held.
     private static func holdStep(after held: Duration) -> TimeInterval {
@@ -196,6 +199,9 @@ struct PlayerControlsOverlay: View {
         .background {
             DirectionalHoldDetector(isEnabled: focusedField == .scrubber) { holdDirection = $0 }
         }
+        .background {
+            TouchpadScrubDetector(isEnabled: focusedField == .scrubber, onEvent: handleTouchScrub)
+        }
         .task(id: holdDirection) {
             guard let holdDirection else { return }
             let sign: TimeInterval = holdDirection == .left ? -1 : 1
@@ -272,6 +278,7 @@ struct PlayerControlsOverlay: View {
             .buttonStyle(ScrubberButtonStyle())
             .focused($focusedField, equals: .scrubber)
             .onMoveCommand { direction in
+                guard !isSwipeMoveCommand else { return }
                 switch direction {
                 case .left:
                     controller.scrub(by: -Self.jumpSeconds)
@@ -288,6 +295,26 @@ struct PlayerControlsOverlay: View {
                 trackMenus
                     .transition(.opacity)
             }
+        }
+    }
+
+    private var isSwipeMoveCommand: Bool {
+        if isTouchScrubbing { return true }
+        guard let touchScrubActivity else { return false }
+        return .now - touchScrubActivity < Self.swipeMoveCommandGrace
+    }
+
+    private func handleTouchScrub(_ event: TouchpadScrubDetector.Event) {
+        touchScrubActivity = .now
+        switch event {
+        case .began:
+            isTouchScrubbing = true
+        case .scrub(let seconds):
+            controller.scrub(by: seconds)
+            scrubGeneration += 1
+            showControls()
+        case .ended:
+            isTouchScrubbing = false
         }
     }
 
