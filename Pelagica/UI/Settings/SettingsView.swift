@@ -53,6 +53,10 @@ struct SettingsView: View {
                         itemPageSection
                     }
                 
+                    SettingsSection(title: i18n.t("subtitles")) {
+                        SubtitleStyleSettings()
+                    }
+
                     SettingsSection(title: i18n.t("sidebar:app_icon")) {
                         HStack(spacing: 34) {
                             ForEach(icons) { icon in

@@ -10,6 +10,7 @@ import UIKit
 
 struct VideoPlayerView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var subtitleStyleStore: SubtitleStyleStore
     @Environment(\.dismiss) private var dismiss
 
     let item: BaseItemDto
@@ -438,7 +439,8 @@ struct VideoPlayerView: View {
                 displayAspectRatio: displayAspectRatio(for: mediaStreams),
                 mediaStreams: method == .transcode ? [] : mediaStreams,
                 audioStream: method == .transcode ? nil : audioStreams.first { $0.index == selectedAudioStreamIndex },
-                subtitle: subtitleSelection(for: selectedSubtitle)
+                subtitle: subtitleSelection(for: selectedSubtitle),
+                subtitleStyle: subtitleStyleStore.style
             )
             controller.setNowPlayingMetadata(title: playerTitle, subtitle: playerSubtitle, overview: currentItem.overview)
             isLoaded = true

@@ -3,12 +3,14 @@
 //  Pelagica
 //
 
+import JellyfinAPI
 import SwiftUI
 
 struct MainView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var configStore = AppConfigStore()
     @StateObject private var seerrStore = SeerrStore()
+    @StateObject private var subtitleStyleStore = SubtitleStyleStore()
     @StateObject private var navigationCoordinator = TabNavigationCoordinator()
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(Translations.languageDefaultsKey) private var languageOverride: String?
@@ -42,13 +44,18 @@ struct MainView: View {
         .environmentObject(configStore)
         .environmentObject(seerrStore)
         .environmentObject(navigationCoordinator)
+        .environmentObject(subtitleStyleStore)
         .task {
             guard let client = appState.client else { return }
+            Task { await subtitleStyleStore.load(client: client, userID: appState.currentUser?.id) }
             await configStore.load(client: client)
             await configureSeerr()
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active, let client = appState.client else { return }
+            Task {
+                await subtitleStyleStore.load(client: client, userID: appState.currentUser?.id)
+            }
             Task {
                 await configStore.load(client: client)
                 await configureSeerr()
