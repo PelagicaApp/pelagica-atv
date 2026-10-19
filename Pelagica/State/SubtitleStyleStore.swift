@@ -32,14 +32,15 @@ final class SubtitleStyleStore: ObservableObject {
 
         let generation = editGeneration
         do {
-            let preferences = try await client.send(Paths.getDisplayPreferences(
-                displayPreferencesID: Self.displayPreferencesID,
-                userID: userID,
-                client: Self.preferencesClient
-            )).value
+            let preferences = try await Self.fetchPreferences(client: client, userID: userID)
             guard generation == editGeneration, self.userID == userID else { return }
             guard let json = preferences.customPrefs?[Self.customPrefsKey],
-                  let remote = try? JSONDecoder().decode(SubtitleStyle.self, from: Data(json.utf8)) else { return }
+                  let remote = try? JSONDecoder().decode(SubtitleStyle.self, from: Data(json.utf8)) else {
+                if cachedStyle(for: userID) != nil {
+                    await save(style, userID: userID)
+                }
+                return
+            }
             style = remote
             cache(remote, for: userID)
         } catch {
@@ -67,11 +68,7 @@ final class SubtitleStyleStore: ObservableObject {
     private func save(_ style: SubtitleStyle, userID: String) async {
         guard let client, let data = try? JSONEncoder().encode(style), let json = String(data: data, encoding: .utf8) else { return }
         do {
-            var preferences = try await client.send(Paths.getDisplayPreferences(
-                displayPreferencesID: Self.displayPreferencesID,
-                userID: userID,
-                client: Self.preferencesClient
-            )).value
+            var preferences = try await Self.fetchPreferences(client: client, userID: userID)
             guard style == self.style else { return }
             var customPrefs = preferences.customPrefs ?? [:]
             customPrefs[Self.customPrefsKey] = json
@@ -85,6 +82,22 @@ final class SubtitleStyleStore: ObservableObject {
         } catch {
             print("Pelagica: failed to save subtitle style: \(error)")
         }
+    }
+
+    private static func fetchPreferences(client: JellyfinClient, userID: String) async throws -> DisplayPreferencesDto {
+        let request = Paths.getDisplayPreferences(
+            displayPreferencesID: displayPreferencesID,
+            userID: userID,
+            client: preferencesClient
+        )
+        let data = try await client.send(request.withResponse(Data.self)).value
+        guard var json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Display preferences aren't a JSON object"))
+        }
+        if let customPrefs = json["CustomPrefs"] as? [String: Any] {
+            json["CustomPrefs"] = customPrefs.compactMapValues { $0 as? String }
+        }
+        return try JSONDecoder().decode(DisplayPreferencesDto.self, from: JSONSerialization.data(withJSONObject: json))
     }
 
     // MARK: - Cache
