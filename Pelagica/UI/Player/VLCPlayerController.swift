@@ -8,6 +8,7 @@ import Combine
 import JellyfinAPI
 import TVVLCKit
 import UIKit
+import VideoToolbox
 
 final class PlaybackClock: ObservableObject {
     @Published fileprivate(set) var currentSeconds: TimeInterval = 0
@@ -60,10 +61,12 @@ final class VLCPlayerController: NSObject, ObservableObject {
 
     private static func library(for style: SubtitleStyle) -> VLCLibrary {
         if let library = libraries[style] { return library }
-        let library = VLCLibrary(options: style.vlcOptions)
+        let library = VLCLibrary(options: style.vlcOptions + decoderOptions)
         libraries[style] = library
         return library
     }
+
+    private static let decoderOptions: [String] = VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC) ? [] : ["--no-skip-frames", "--no-avcodec-hurry-up"]
 
     private static let seekSettleTolerance: TimeInterval = 1.5
     private static let seekSettleTimeout: TimeInterval = 3
