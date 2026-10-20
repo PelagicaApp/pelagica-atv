@@ -48,7 +48,7 @@ struct TouchpadScrubDetector: UIViewRepresentable {
         }
 
         private static let secondsPerSurfaceWidth: TimeInterval = 90
-        private static let maxSpeedMultiplier: Double = 8
+        private static let maxSpeedMultiplier: Double = 6
         private static let flickSecondsPerVelocitySquared: TimeInterval = 8
         private static let maxFlickSeconds: TimeInterval = 600
         private static let minFlickVelocity: Double = 1.5
