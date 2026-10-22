@@ -14,6 +14,7 @@ struct SeerrLoginView: View {
     @State private var password = ""
     @State private var isLoggingIn = false
     @State private var errorMessage: String?
+    @State private var supportsQuickConnect = false
 
     private var username: String {
         appState.currentUser?.name ?? ""
@@ -34,6 +35,15 @@ struct SeerrLoginView: View {
             .frame(maxWidth: 900)
 
             VStack(alignment: .leading, spacing: 20) {
+                if supportsQuickConnect {
+                    Button(action: loginWithQuickConnect) {
+                        Text(i18n.t("login:sign_in_with_quick_connect"))
+                    }
+                    .buttonStyle(PelagicaButtonStyle(emphasis: .primary))
+                    .disabled(isLoggingIn)
+                    .padding(.bottom, 20)
+                }
+
                 Text(username)
                     .font(.system(size: 28))
                     .foregroundStyle(.white.opacity(0.6))
@@ -53,7 +63,7 @@ struct SeerrLoginView: View {
                 Button(action: login) {
                     Text(isLoggingIn ? i18n.t("login:logging_in") : i18n.t("login:login"))
                 }
-                .buttonStyle(PelagicaButtonStyle(emphasis: .primary))
+                .buttonStyle(PelagicaButtonStyle(emphasis: supportsQuickConnect ? .secondary : .primary))
                 .disabled(username.isEmpty || isLoggingIn)
 
                 if let errorMessage {
@@ -63,6 +73,10 @@ struct SeerrLoginView: View {
                 }
             }
             .frame(maxWidth: 700)
+        }
+        .task {
+            let supported = await seerrStore.supportsQuickConnect()
+            withAnimation { supportsQuickConnect = supported }
         }
     }
 
@@ -77,6 +91,21 @@ struct SeerrLoginView: View {
                 dismiss()
             } catch {
                 errorMessage = i18n.t("sidebar:seerr_login_failed")
+            }
+        }
+    }
+
+    private func loginWithQuickConnect() {
+        guard !isLoggingIn else { return }
+        errorMessage = nil
+        isLoggingIn = true
+        Task {
+            defer { isLoggingIn = false }
+            do {
+                try await seerrStore.loginWithQuickConnect()
+                dismiss()
+            } catch {
+                errorMessage = i18n.t("login:quick_connect_failed")
             }
         }
     }

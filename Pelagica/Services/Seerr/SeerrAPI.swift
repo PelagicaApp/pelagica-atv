@@ -44,6 +44,45 @@ nonisolated struct SeerrAPI: Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(["username": username, "password": password])
 
+        return try await sessionCookie(for: request)
+    }
+
+    static func initiateQuickConnect(seerrURL: String) async throws -> (code: String, secret: String) {
+        guard let baseURL = baseURL(from: seerrURL) else { throw SeerrAPIError.invalidURL }
+
+        var request = URLRequest(url: endpoint(baseURL, "auth/jellyfin/quickconnect/initiate"))
+        request.httpMethod = "POST"
+
+        let (data, response) = try await urlSession.data(for: request)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard status == 200 else { throw SeerrAPIError.badStatus(status) }
+        let result = try JSONDecoder().decode(QuickConnectInitiation.self, from: data)
+        return (result.code, result.secret)
+    }
+
+    /// Versions with Quick Connect reject a malformed secret with 400. Older ones don't know the route.
+    static func supportsQuickConnect(seerrURL: String) async -> Bool {
+        guard let baseURL = baseURL(from: seerrURL),
+              var components = URLComponents(url: endpoint(baseURL, "auth/jellyfin/quickconnect/check"), resolvingAgainstBaseURL: false)
+        else { return false }
+        components.queryItems = [URLQueryItem(name: "secret", value: "-")]
+        guard let url = components.url, let (_, response) = try? await urlSession.data(from: url) else { return false }
+        return (response as? HTTPURLResponse)?.statusCode == 400
+    }
+
+    /// Exchanges an authorized Quick Connect secret for a session cookie value.
+    static func authenticateQuickConnect(seerrURL: String, secret: String) async throws -> String {
+        guard let baseURL = baseURL(from: seerrURL) else { throw SeerrAPIError.invalidURL }
+
+        var request = URLRequest(url: endpoint(baseURL, "auth/jellyfin/quickconnect/authenticate"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(["secret": secret])
+
+        return try await sessionCookie(for: request)
+    }
+
+    private static func sessionCookie(for request: URLRequest) async throws -> String {
         let (_, response) = try await urlSession.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw SeerrAPIError.badStatus(0) }
         guard http.statusCode == 200 else {
@@ -181,6 +220,11 @@ nonisolated private struct ResultsPage: Decodable {
     let results: [Lossy<SeerrMediaItem>]
 
     var items: [SeerrMediaItem] { results.compactMap(\.value) }
+}
+
+nonisolated private struct QuickConnectInitiation: Decodable {
+    let code: String
+    let secret: String
 }
 
 nonisolated private struct CombinedCredits: Decodable {

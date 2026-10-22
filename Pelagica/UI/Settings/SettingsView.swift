@@ -199,7 +199,7 @@ struct SettingsView: View {
             
             if seerrStore.isLoggedIn {
                 Button {
-                    seerrStore.logout()
+                    seerrStore.logout(disableAutoLogin: true)
                 } label: {
                     Text(i18n.t("sidebar:seerr_logout_action"))
                 }

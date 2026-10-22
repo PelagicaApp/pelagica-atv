@@ -67,6 +67,7 @@ struct MainView: View {
         await seerrStore.configure(
             seerrURL: configStore.config.seerrURL,
             profileID: appState.activeProfile?.id,
+            jellyfin: appState.client,
             pendingLogin: appState.pendingSeerrLogin
         )
     }
