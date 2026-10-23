@@ -14,6 +14,7 @@ struct PlayerControls: View {
     @State private var isVisible = true
     @State private var hideTask: Task<Void, Never>?
     @State private var isShowingTracks = false
+    @State private var doubleTapJumps = 0
 
     private static let jumpInterval: TimeInterval = 10
     private static let autoHideDelay: Duration = .seconds(4)
@@ -71,6 +72,7 @@ struct PlayerControls: View {
             jumpZone(by: Self.jumpInterval)
         }
         .ignoresSafeArea()
+        .sensoryFeedback(.impact(weight: .light), trigger: doubleTapJumps)
     }
 
     private func jumpZone(by seconds: TimeInterval) -> some View {
@@ -78,6 +80,7 @@ struct PlayerControls: View {
             .contentShape(Rectangle())
             .onTapGesture(count: 2) {
                 controller.jump(by: seconds)
+                doubleTapJumps += 1
                 show()
             }
             .onTapGesture {
