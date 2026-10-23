@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates Pelagica/Resources/licenses.json from the resolved Swift packages.
+"""Generates Pelagica/Shared/Resources/licenses.json from the resolved Swift packages.
 
 Run after changing dependencies. Resolve packages in Xcode first so the
 checkouts exist in DerivedData.
@@ -13,7 +13,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RESOLVED = os.path.join(ROOT, "Pelagica.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved")
-OUTPUT = os.path.join(ROOT, "Pelagica/Resources/licenses.json")
+OUTPUT = os.path.join(ROOT, "Pelagica/Shared/Resources/licenses.json")
 
 LICENSE_NAMES = [
     ("GNU LESSER GENERAL PUBLIC LICENSE", "LGPL-2.1"),

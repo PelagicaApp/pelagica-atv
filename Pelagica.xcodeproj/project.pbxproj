@@ -20,23 +20,20 @@
 		3D72E93D304D940200733911 /* Pelagica.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pelagica.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		1A05001030C0000100000001 /* Exceptions for "Pelagica" folder in "Pelagica iOS" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				LaunchScreen.storyboard,
-			);
-			target = 1A05000830C0000100000001 /* Pelagica iOS */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		3D72E93F304D940200733911 /* Pelagica */ = {
+		5E1A7D0130B2F00100A1B2C3 /* Shared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				1A05001030C0000100000001 /* Exceptions for "Pelagica" folder in "Pelagica iOS" target */,
-			);
-			path = Pelagica;
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		5E1A7D0230B2F00100A1B2C3 /* TV */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TV;
+			sourceTree = "<group>";
+		};
+		5E1A7D0330B2F00100A1B2C3 /* iOS */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = iOS;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -82,6 +79,16 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		3D72E93F304D940200733911 /* Pelagica */ = {
+			isa = PBXGroup;
+			children = (
+				5E1A7D0130B2F00100A1B2C3 /* Shared */,
+				5E1A7D0230B2F00100A1B2C3 /* TV */,
+				5E1A7D0330B2F00100A1B2C3 /* iOS */,
+			);
+			path = Pelagica;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -98,7 +105,8 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				3D72E93F304D940200733911 /* Pelagica */,
+				5E1A7D0130B2F00100A1B2C3 /* Shared */,
+				5E1A7D0330B2F00100A1B2C3 /* iOS */,
 			);
 			name = "Pelagica iOS";
 			packageProductDependencies = (
@@ -123,7 +131,8 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				3D72E93F304D940200733911 /* Pelagica */,
+				5E1A7D0130B2F00100A1B2C3 /* Shared */,
+				5E1A7D0230B2F00100A1B2C3 /* TV */,
 			);
 			name = Pelagica;
 			packageProductDependencies = (
