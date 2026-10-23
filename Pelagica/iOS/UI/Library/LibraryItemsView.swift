@@ -36,7 +36,9 @@ struct LibraryItemsView: View {
         _model = StateObject(wrappedValue: LibraryItemsModel(query: .studio(id: studio.id)))
     }
 
-    private let columns = [GridItem(.adaptive(minimum: 104), spacing: 12)]
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    private var columns: [GridItem] { CardMetrics.gridColumns(minimum: 104, spacing: 12, sizeClass) }
 
     var body: some View {
         ScrollView {

@@ -10,7 +10,9 @@ struct StudiosView: View {
     @EnvironmentObject private var appState: AppState
     @State private var studios: [StudioEntry]?
 
-    private let columns = [GridItem(.adaptive(minimum: 160), spacing: 12)]
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    private var columns: [GridItem] { CardMetrics.gridColumns(minimum: 160, spacing: 12, sizeClass) }
 
     var body: some View {
         ScrollView {

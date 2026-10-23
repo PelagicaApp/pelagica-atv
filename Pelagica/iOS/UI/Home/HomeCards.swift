@@ -7,6 +7,7 @@ import JellyfinAPI
 import SwiftUI
 
 struct LibraryCard: View {
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @EnvironmentObject private var appState: AppState
     let library: BaseItemDto
     var width: CGFloat?
@@ -25,13 +26,14 @@ struct LibraryCard: View {
                     .font(.footnote.weight(.medium))
                     .lineLimit(1)
             }
-            .frame(width: width)
+            .frame(width: width.map { $0 * CardMetrics.landscapeScale(sizeClass) })
         }
         .buttonStyle(.plain)
     }
 }
 
 struct GenreCard: View {
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @EnvironmentObject private var appState: AppState
     let genre: GenreEntry
     var width: CGFloat? = 220
@@ -52,7 +54,7 @@ struct GenreCard: View {
                     .padding(10)
             }
             .aspectRatio(16.0 / 9.0, contentMode: .fit)
-            .frame(width: width)
+            .frame(width: width.map { $0 * CardMetrics.landscapeScale(sizeClass) })
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
@@ -106,6 +108,7 @@ struct StudioCard: View {
 }
 
 struct StudioCardFrame<Content: View>: View {
+    @Environment(\.horizontalSizeClass) private var sizeClass
     var width: CGFloat? = 220
     @ViewBuilder var content: () -> Content
 
@@ -115,7 +118,7 @@ struct StudioCardFrame<Content: View>: View {
             content()
         }
         .aspectRatio(16.0 / 9.0, contentMode: .fit)
-        .frame(width: width)
+        .frame(width: width.map { $0 * CardMetrics.landscapeScale(sizeClass) })
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }

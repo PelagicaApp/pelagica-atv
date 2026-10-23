@@ -9,6 +9,7 @@ import SwiftUI
 struct HomeHero: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     let items: [BaseItemDto]
     let showFavoriteButton: Bool
@@ -19,6 +20,10 @@ struct HomeHero: View {
 
     private static let slideDuration: Duration = .seconds(8)
 
+    static func aspectRatio(for sizeClass: UserInterfaceSizeClass?) -> CGFloat {
+        sizeClass == .regular ? 2 : 2.0 / 3.0
+    }
+
     private var currentItem: BaseItemDto? {
         items.first { $0.id == selection } ?? items.first
     }
@@ -26,12 +31,12 @@ struct HomeHero: View {
     var body: some View {
         TabView(selection: $selection) {
             ForEach(items, id: \.id) { item in
-                HeroPage(item: item)
+                HeroPage(item: item, isWide: sizeClass == .regular)
                     .tag(item.id)
             }
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
-        .aspectRatio(2.0 / 3.0, contentMode: .fit)
+        .aspectRatio(Self.aspectRatio(for: sizeClass), contentMode: .fit)
         .overlay(alignment: .bottom) { controls }
         .task(id: currentItem?.id) {
             model.bind(appState: appState)
@@ -83,6 +88,7 @@ struct HomeHero: View {
                     }
                 }
                 .controlSize(.large)
+                .frame(maxWidth: sizeClass == .regular ? 480 : .infinity)
 
                 if items.count > 1 {
                     HStack(spacing: 6) {
@@ -110,11 +116,12 @@ struct HomeHero: View {
 private struct HeroPage: View {
     @EnvironmentObject private var appState: AppState
     let item: BaseItemDto
+    let isWide: Bool
 
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .bottom) {
-                RemoteImage(url: ItemImages.url(ItemImages.primary(item), client: appState.client, width: 900, height: 1350))
+                RemoteImage(url: imageURL)
                     .frame(width: proxy.size.width, height: proxy.size.height)
 
                 LinearGradient(
@@ -128,6 +135,13 @@ private struct HeroPage: View {
                     .padding(.bottom, 130)
             }
         }
+    }
+
+    private var imageURL: URL? {
+        if isWide {
+            return ItemImages.url(ItemImages.backdrop(item) ?? ItemImages.landscape(item), client: appState.client, width: 1920, height: 960)
+        }
+        return ItemImages.url(ItemImages.primary(item), client: appState.client, width: 900, height: 1350)
     }
 
     @ViewBuilder

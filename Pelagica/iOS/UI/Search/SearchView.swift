@@ -12,7 +12,9 @@ struct SearchView: View {
 
     @StateObject private var model = SearchModel()
 
-    private let columns = [GridItem(.adaptive(minimum: 104), spacing: 12)]
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    private var columns: [GridItem] { CardMetrics.gridColumns(minimum: 104, spacing: 12, sizeClass) }
 
     var body: some View {
         NavigationStack {

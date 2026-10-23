@@ -10,6 +10,7 @@ struct HomeView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var configStore: AppConfigStore
     @EnvironmentObject private var seerrStore: SeerrStore
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     @StateObject private var model = HomeModel()
 
@@ -21,7 +22,7 @@ struct HomeView: View {
                         if model.mediaBarItems.isEmpty {
                             Rectangle()
                                 .fill(Color.white.opacity(0.06))
-                                .aspectRatio(2.0 / 3.0, contentMode: .fit)
+                                .aspectRatio(HomeHero.aspectRatio(for: sizeClass), contentMode: .fit)
                         } else {
                             HomeHero(
                                 items: model.mediaBarItems,

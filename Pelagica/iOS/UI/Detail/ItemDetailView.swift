@@ -11,6 +11,7 @@ struct ItemDetailView: View {
     @EnvironmentObject private var configStore: AppConfigStore
     @EnvironmentObject private var seerrStore: SeerrStore
     @Environment(\.openURL) private var openURL
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     @StateObject private var model: ItemDetailModel
     @State private var isOverviewExpanded = false
@@ -103,8 +104,8 @@ struct ItemDetailView: View {
 
     private var header: some View {
         ZStack(alignment: .bottom) {
-            RemoteImage(url: ItemImages.url(ItemImages.backdrop(item) ?? ItemImages.primary(item), client: appState.client, width: 1280, height: 1280))
-                .aspectRatio(1, contentMode: .fit)
+            RemoteImage(url: ItemImages.url(ItemImages.backdrop(item) ?? ItemImages.primary(item), client: appState.client, width: 1920, height: 1280))
+                .aspectRatio(sizeClass == .regular ? 2.2 : 1, contentMode: .fit)
                 .overlay {
                     LinearGradient(colors: [.black, .black.opacity(0.3), .clear], startPoint: .bottom, endPoint: .center)
                 }
@@ -286,6 +287,7 @@ private struct EpisodesSection: View {
 
 private struct EpisodeRow: View {
     @EnvironmentObject private var appState: AppState
+    @Environment(\.horizontalSizeClass) private var sizeClass
     let episode: BaseItemDto
     let model: ItemDetailModel
 
@@ -297,7 +299,7 @@ private struct EpisodeRow: View {
                 HStack(spacing: 12) {
                     RemoteImage(url: ItemImages.url(ItemImages.landscape(episode), client: appState.client, width: 480, height: 270))
                         .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                        .frame(width: 140)
+                        .frame(width: 140 * CardMetrics.landscapeScale(sizeClass))
                         .overlay(alignment: .bottom) {
                             if let progress = episode.playbackProgress {
                                 ProgressView(value: progress).tint(.white).padding(6)
@@ -350,13 +352,14 @@ private struct EpisodeRow: View {
 
 private struct PersonCard: View {
     @EnvironmentObject private var appState: AppState
+    @Environment(\.horizontalSizeClass) private var sizeClass
     let person: BaseItemPerson
 
     var body: some View {
         NavigationLink(value: person.id.map { PersonDetailRoute(id: $0, name: person.name) }) {
             VStack(spacing: 6) {
                 RemoteImage(url: imageURL, fallbackSymbol: "person")
-                    .frame(width: 84, height: 84)
+                    .frame(width: 84 * CardMetrics.scale(sizeClass), height: 84 * CardMetrics.scale(sizeClass))
                     .clipShape(Circle())
 
                 VStack(spacing: 2) {
@@ -370,7 +373,7 @@ private struct PersonCard: View {
                 }
                 .lineLimit(1)
             }
-            .frame(width: 92)
+            .frame(width: 92 * CardMetrics.scale(sizeClass))
         }
         .buttonStyle(.plain)
     }

@@ -10,7 +10,9 @@ struct LibrariesView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var model = LibrariesModel()
 
-    private let columns = [GridItem(.adaptive(minimum: 160), spacing: 16)]
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    private var columns: [GridItem] { CardMetrics.gridColumns(minimum: 160, spacing: 16, sizeClass) }
 
     var body: some View {
         NavigationStack {

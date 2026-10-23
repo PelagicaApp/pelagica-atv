@@ -7,6 +7,7 @@ import JellyfinAPI
 import SwiftUI
 
 struct SeerrPosterCard: View {
+    @Environment(\.horizontalSizeClass) private var sizeClass
     let item: SeerrMediaItem
     var width: CGFloat? = 120
 
@@ -29,7 +30,7 @@ struct SeerrPosterCard: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            .frame(width: width)
+            .frame(width: width.map { $0 * CardMetrics.scale(sizeClass) })
         }
         .buttonStyle(.plain)
     }

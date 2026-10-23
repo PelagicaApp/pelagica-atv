@@ -8,12 +8,15 @@ import SwiftUI
 
 struct PosterCard: View {
     @EnvironmentObject private var appState: AppState
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.displayScale) private var displayScale
 
     let item: BaseItemDto
     var width: CGFloat? = 120
     var detailText: String?
     var similarity: Double?
+
+    private var scaledWidth: CGFloat? { width.map { $0 * CardMetrics.scale(sizeClass) } }
 
     var body: some View {
         NavigationLink(value: ItemDetailRoute(item: item)) {
@@ -35,7 +38,7 @@ struct PosterCard: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
-            .frame(width: width)
+            .frame(width: scaledWidth)
         }
         .buttonStyle(.plain)
     }
@@ -45,7 +48,7 @@ struct PosterCard: View {
     }
 
     private var imageURL: URL? {
-        let pixelWidth = Int(((width ?? 180) * displayScale).rounded())
+        let pixelWidth = Int(((scaledWidth ?? 270) * displayScale).rounded())
         return ItemImages.url(ItemImages.primary(item), client: appState.client, width: pixelWidth, height: pixelWidth * 3 / 2)
     }
 }
@@ -53,6 +56,7 @@ struct PosterCard: View {
 struct LandscapeCard: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var playerPresenter: PlayerPresenter
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.displayScale) private var displayScale
 
     let item: BaseItemDto
@@ -62,6 +66,8 @@ struct LandscapeCard: View {
     var useSeriesImage = false
     var width: CGFloat = 260
     var onTap: (() -> Void)?
+
+    private var scaledWidth: CGFloat { width * CardMetrics.landscapeScale(sizeClass) }
 
     var body: some View {
         Group {
@@ -117,11 +123,11 @@ struct LandscapeCard: View {
                     .lineLimit(1)
             }
         }
-        .frame(width: width)
+        .frame(width: scaledWidth)
     }
 
     private var imageURL: URL? {
-        let pixelWidth = Int((width * displayScale).rounded())
+        let pixelWidth = Int((scaledWidth * displayScale).rounded())
         let source = (useSeriesImage ? ItemImages.seriesLandscape(item) : nil) ?? ItemImages.landscape(item)
         return ItemImages.url(source, client: appState.client, width: pixelWidth, height: pixelWidth * 9 / 16)
     }

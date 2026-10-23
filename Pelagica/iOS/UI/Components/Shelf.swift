@@ -44,15 +44,18 @@ struct SeerrShelf: View {
 
 /// Grey boxes standing in for a row that's still loading.
 struct PlaceholderShelf: View {
+    @Environment(\.horizontalSizeClass) private var sizeClass
     let title: String?
     var isLandscape = false
+
+    private var scale: CGFloat { isLandscape ? CardMetrics.landscapeScale(sizeClass) : CardMetrics.scale(sizeClass) }
 
     var body: some View {
         Shelf(title: title ?? "", isLoading: true) {
             ForEach(0..<6, id: \.self) { _ in
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color.white.opacity(0.06))
-                    .frame(width: isLandscape ? 260 : 120, height: isLandscape ? 146 : 180)
+                    .frame(width: (isLandscape ? 260 : 120) * scale, height: (isLandscape ? 146 : 180) * scale)
             }
         }
     }
