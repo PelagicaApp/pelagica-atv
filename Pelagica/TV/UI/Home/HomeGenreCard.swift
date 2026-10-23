@@ -58,20 +58,3 @@ struct HomeGenreCard: View {
         return client.url(with: request, queryAPIKey: true)
     }
 }
-
-private extension GenreEntry {
-    var tint: Color {
-        var hash: UInt64 = 0xcbf29ce484222325
-        for byte in id.utf8 {
-            hash = (hash ^ UInt64(byte)) &* 0x100000001b3
-        }
-        let hue = Double(hash % 360) / 360
-        let saturation = 0.35 + Double((hash >> 16) % 10) / 100
-        let lightness = 0.42 + Double((hash >> 32) % 8) / 100
-
-        // HSL -> HSB
-        let brightness = lightness + saturation * min(lightness, 1 - lightness)
-        let hsbSaturation = brightness == 0 ? 0 : 2 * (1 - lightness / brightness)
-        return Color(hue: hue, saturation: hsbSaturation, brightness: brightness)
-    }
-}

@@ -113,37 +113,8 @@ struct ContinueWatchingCard: View {
         let pixelWidth = Int((measuredWidth * displayScale).rounded())
         let pixelHeight = Int((measuredWidth * displayScale / aspectRatio).rounded())
 
-        guard let source = (useSeriesImage ? seriesImageSource : nil) ?? itemImageSource else { return nil }
-
-        let request = Paths.getItemImage(
-            itemID: source.itemID,
-            imageType: source.imageType.rawValue,
-            parameters: .init(fillWidth: pixelWidth, fillHeight: pixelHeight, tag: source.tag)
-        )
-        return client.url(with: request, queryAPIKey: true)
-    }
-
-    private var itemImageSource: (itemID: String, imageType: ImageType, tag: String?)? {
-        guard let id = item.id else { return nil }
-        if let thumbTag = item.imageTags?["Thumb"] {
-            return (id, .thumb, thumbTag)
-        } else if let backdropTag = item.backdropImageTags?.first {
-            return (id, .backdrop, backdropTag)
-        } else {
-            return (id, .primary, item.imageTags?["Primary"])
-        }
-    }
-
-    /// Series thumb or backdrop for episodes, nil when the item has none
-    private var seriesImageSource: (itemID: String, imageType: ImageType, tag: String?)? {
-        guard item.type == .episode else { return nil }
-        if let seriesID = item.seriesID, let thumbTag = item.seriesThumbImageTag {
-            return (seriesID, .thumb, thumbTag)
-        } else if let thumbItemID = item.parentThumbItemID, let thumbTag = item.parentThumbImageTag {
-            return (thumbItemID, .thumb, thumbTag)
-        } else if let backdropItemID = item.parentBackdropItemID, let backdropTag = item.parentBackdropImageTags?.first {
-            return (backdropItemID, .backdrop, backdropTag)
-        }
-        return nil
+        let source = (useSeriesImage ? ItemImages.seriesLandscape(item) : nil) ?? ItemImages.landscape(item)
+        return ItemImages.url(source, client: client, width: pixelWidth, height: pixelHeight)
     }
 }
+

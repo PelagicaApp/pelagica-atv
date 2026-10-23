@@ -6,7 +6,11 @@
 import AVFoundation
 import Combine
 import JellyfinAPI
+#if os(tvOS)
 import TVVLCKit
+#else
+import MobileVLCKit
+#endif
 import UIKit
 
 final class PlaybackClock: ObservableObject {

@@ -127,6 +127,29 @@ final class ItemDetailModel: ObservableObject {
         item.userData?.isPlayed ?? false
     }
 
+    private var isMovieOrSeries: Bool {
+        item.type == .movie || item.type == .series
+    }
+
+    var showsWatchlistButton: Bool {
+        isMovieOrSeries && configStore?.config.itemPage?.showWatchlistButton == true
+    }
+
+    var showsFavoriteButton: Bool {
+        guard isMovieOrSeries || item.type == .boxSet else { return false }
+        guard let allowedTypes = configStore?.config.itemPage?.favoriteButton, let type = item.type else { return true }
+        return allowedTypes.contains(type.rawValue)
+    }
+
+    var showsPlayedButton: Bool {
+        isMovieOrSeries
+    }
+
+    var detailBadges: [DetailBadgeValue] {
+        let types = configStore?.config.itemPage?.detailBadges ?? DetailBadges.defaultBadges
+        return types.compactMap { DetailBadges.value(for: item, type: $0) }
+    }
+
     var trailerAvailable: Bool {
         !localTrailers.isEmpty || trailerURL != nil
     }
