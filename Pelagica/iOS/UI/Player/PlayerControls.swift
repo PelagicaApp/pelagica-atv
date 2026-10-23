@@ -13,6 +13,7 @@ struct PlayerControls: View {
 
     @State private var isVisible = true
     @State private var hideTask: Task<Void, Never>?
+    @State private var isShowingTracks = false
 
     private static let jumpInterval: TimeInterval = 10
     private static let autoHideDelay: Duration = .seconds(4)
@@ -56,6 +57,9 @@ struct PlayerControls: View {
         .onAppear(perform: scheduleHide)
         .onChange(of: controller.isPlaying) { _, isPlaying in
             if isPlaying { scheduleHide() } else { show(autoHide: false) }
+        }
+        .onChange(of: isShowingTracks) { _, isShowing in
+            if isShowing { show(autoHide: false) } else { scheduleHide() }
         }
     }
 
@@ -112,53 +116,63 @@ struct PlayerControls: View {
     }
 
     private var tracksMenu: some View {
-        Menu {
-            if session.audioStreams.count > 1 {
-                Picker(selection: audioSelection) {
-                    ForEach(session.audioStreams, id: \.index) { stream in
-                        Text(audioTitle(for: stream)).tag(stream.index)
-                    }
-                } label: {
-                    Label(i18n.t("player:audioTracks"), systemImage: "speaker.wave.2")
-                }
-                .pickerStyle(.menu)
-            }
-
-            if !session.subtitleStreams.isEmpty {
-                Picker(selection: subtitleSelection) {
-                    Text(i18n.t("player:off")).tag(Int?.none)
-                    ForEach(session.subtitleStreams, id: \.index) { stream in
-                        Text(subtitleTitle(for: stream)).tag(stream.index)
-                    }
-                } label: {
-                    Label(i18n.t("subtitles"), systemImage: "captions.bubble")
-                }
-                .pickerStyle(.menu)
-            }
+        Button {
+            isShowingTracks = true
         } label: {
             Image(systemName: "captions.bubble")
                 .font(.title3.weight(.semibold))
                 .frame(width: 44, height: 44)
         }
+        .popover(isPresented: $isShowingTracks) {
+            tracksList
+                .frame(minWidth: 280, idealHeight: 360)
+                .presentationCompactAdaptation(.popover)
+        }
     }
 
-    private var audioSelection: Binding<Int?> {
-        Binding(
-            get: { session.selectedAudioStreamIndex },
-            set: { index in
-                guard let stream = session.audioStreams.first(where: { $0.index == index }) else { return }
-                session.selectAudioTrack(stream)
+    private var tracksList: some View {
+        List {
+            if session.audioStreams.count > 1 {
+                Section(i18n.t("player:audioTracks")) {
+                    ForEach(session.audioStreams, id: \.index) { stream in
+                        trackRow(audioTitle(for: stream), isSelected: stream.index == session.selectedAudioStreamIndex) {
+                            session.selectAudioTrack(stream)
+                        }
+                    }
+                }
             }
-        )
+
+            if !session.subtitleStreams.isEmpty {
+                Section(i18n.t("subtitles")) {
+                    trackRow(i18n.t("player:off"), isSelected: session.selectedSubtitleStreamIndex == nil) {
+                        session.selectSubtitleTrack(nil)
+                    }
+                    ForEach(session.subtitleStreams, id: \.index) { stream in
+                        trackRow(subtitleTitle(for: stream), isSelected: stream.index == session.selectedSubtitleStreamIndex) {
+                            session.selectSubtitleTrack(stream)
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    private var subtitleSelection: Binding<Int?> {
-        Binding(
-            get: { session.selectedSubtitleStreamIndex },
-            set: { index in
-                session.selectSubtitleTrack(session.subtitleStreams.first { $0.index == index })
+    private func trackRow(_ title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button {
+            action()
+            isShowingTracks = false
+        } label: {
+            HStack {
+                Text(title)
+                    .foregroundStyle(.primary)
+                Spacer()
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .fontWeight(.semibold)
+                }
             }
-        )
+            .contentShape(Rectangle())
+        }
     }
 
     private func audioTitle(for stream: MediaStream) -> String {
@@ -215,7 +229,7 @@ struct PlayerControls: View {
         hideTask?.cancel()
         hideTask = Task {
             try? await Task.sleep(for: Self.autoHideDelay)
-            guard !Task.isCancelled, controller.isPlaying, !controller.isScrubbing else { return }
+            guard !Task.isCancelled, controller.isPlaying, !controller.isScrubbing, !isShowingTracks else { return }
             isVisible = false
         }
     }
