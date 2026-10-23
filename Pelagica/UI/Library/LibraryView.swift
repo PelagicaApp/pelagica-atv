@@ -11,11 +11,8 @@ struct LibraryView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var navigationCoordinator: TabNavigationCoordinator
 
-    @State private var libraries: [BaseItemDto] = []
-    @State private var errorMessage: String?
+    @StateObject private var model = LibrariesModel()
     @State private var path = NavigationPath()
-
-    private let supportedLibraryTypes: [CollectionType] = [.movies, .tvshows, .boxsets]
 
     private let columns = [GridItem(.adaptive(minimum: 380), spacing: 60)]
 
@@ -30,12 +27,12 @@ struct LibraryView: View {
                             .font(.system(size: 40, weight: .bold))
                             .foregroundStyle(.white)
 
-                        if let errorMessage {
+                        if let errorMessage = model.errorMessage {
                             Text(errorMessage)
                                 .foregroundStyle(.secondary)
                         } else {
                             LazyVGrid(columns: columns, spacing: 60) {
-                                ForEach(libraries, id: \.id) { library in
+                                ForEach(model.libraries, id: \.id) { library in
                                     LibraryCard(library: library)
                                 }
                             }
@@ -50,27 +47,11 @@ struct LibraryView: View {
             .pelagicaDestinations()
         }
         .onDisappear { path = NavigationPath() }
-        .task { await loadLibraries() }
+        .task { await model.load(appState: appState) }
         .onChange(of: navigationCoordinator.pendingLibrary) { _, pendingLibrary in
             guard let pendingLibrary else { return }
             path.append(pendingLibrary)
             navigationCoordinator.pendingLibrary = nil
-        }
-    }
-
-    private func loadLibraries() async {
-        guard let client = appState.client else { return }
-        do {
-            let result = try await client.send(Paths.getUserViews()).value
-            if (result.items != nil && result.items?.isEmpty == false) {
-                libraries = result.items?.filter {
-                    $0.collectionType != nil && supportedLibraryTypes.contains($0.collectionType!)
-                } ?? []
-            } else {
-                libraries = []
-            }
-        } catch {
-            errorMessage = "Couldn't load your libraries."
         }
     }
 }

@@ -3,7 +3,6 @@
 //  Pelagica
 //
 
-import Get
 import JellyfinAPI
 import SwiftUI
 
@@ -13,26 +12,7 @@ struct ItemDetailView: View {
     @EnvironmentObject private var seerrStore: SeerrStore
     @Environment(\.openURL) private var openURL
 
-    @State private var item: BaseItemDto
-    @State private var nextEpisode: BaseItemDto?
-    @State private var isWatchlist: Bool
-    @State private var isTogglingWatchlist = false
-    @State private var isFavorite: Bool
-    @State private var isTogglingFavorite = false
-    @State private var isTogglingPlayed = false
-    @State private var similarItems: [BaseItemDto] = []
-    @State private var collectionItems: [String: [BaseItemDto]] = [:]
-    @State private var seerrRecommendations: [SeerrMediaItem] = []
-
-    @State private var seasons: [BaseItemDto] = []
-    @State private var selectedSeasonID: String?
-    @State private var episodes: [BaseItemDto] = []
-
-    @State private var boxSetItems: [BaseItemDto] = []
-
-    @State private var playbackTarget: PlaybackTarget?
-    @State private var localTrailers: [BaseItemDto] = []
-    @State private var themeSong = ThemeSongPlayer()
+    @StateObject private var model: ItemDetailModel
 
     @Namespace private var heroNamespace
     @Namespace private var seasonsNamespace
@@ -42,9 +22,7 @@ struct ItemDetailView: View {
     @FocusState private var isPlayButtonFocused: Bool
 
     init(item: BaseItemDto) {
-        _item = State(initialValue: item)
-        _isWatchlist = State(initialValue: item.userData?.isLikes ?? false)
-        _isFavorite = State(initialValue: item.userData?.isFavorite ?? false)
+        _model = StateObject(wrappedValue: ItemDetailModel(item: item))
     }
 
     var body: some View {
@@ -56,48 +34,48 @@ struct ItemDetailView: View {
                         .focusScope(heroNamespace)
                         .focusSection()
 
-                    if item.type == .series {
+                    if model.item.type == .series {
                         ItemDetailEpisodesSection(
-                            seasons: seasons,
-                            selectedSeasonID: $selectedSeasonID,
-                            episodes: episodes,
+                            seasons: model.seasons,
+                            selectedSeasonID: $model.selectedSeasonID,
+                            episodes: model.episodes,
                             seasonsNamespace: seasonsNamespace,
                             episodesNamespace: episodesNamespace,
-                            onPlayEpisode: startPlayback,
-                            onTogglePlayed: togglePlayed,
-                            onSelectSeason: { await loadEpisodes(seasonID: $0) }
+                            onPlayEpisode: model.startPlayback,
+                            onTogglePlayed: model.togglePlayed,
+                            onSelectSeason: { await model.loadEpisodes(seasonID: $0) }
                         )
                     }
 
-                    if item.type == .boxSet, !boxSetItems.isEmpty {
+                    if model.item.type == .boxSet, !model.boxSetItems.isEmpty {
                         ItemDetailBoxSetSection(
-                            items: boxSetItems,
-                            nextItemID: nextBoxSetItem?.id,
+                            items: model.boxSetItems,
+                            nextItemID: model.nextBoxSetItem?.id,
                             namespace: boxSetNamespace
                         )
                     }
 
-                    if localTrailers.count > 1 {
+                    if model.localTrailers.count > 1 {
                         ItemTrailersSection(
-                            trailers: localTrailers,
-                            onPlayTrailer: playLocalTrailer
+                            trailers: model.localTrailers,
+                            onPlayTrailer: model.startPlayback
                         )
                     }
                     
-                    if let people = item.people, !people.isEmpty {
+                    if let people = model.item.people, !people.isEmpty {
                         ItemDetailsPeopleSection(people: people)
                     }
 
-                    if !collectionItems.isEmpty {
-                        ItemDetailCollectionsSection(collectionItems: collectionItems)
+                    if !model.collectionItems.isEmpty {
+                        ItemDetailCollectionsSection(collectionItems: model.collectionItems)
                     }
 
-                    if !similarItems.isEmpty {
-                        ItemDetailSimilarSection(items: similarItems, namespace: similarNamespace)
+                    if !model.similarItems.isEmpty {
+                        ItemDetailSimilarSection(items: model.similarItems, namespace: similarNamespace)
                     }
 
-                    if !seerrRecommendations.isEmpty {
-                        SeerrItemsRow(title: i18n.t("item:recommendations"), items: seerrRecommendations)
+                    if !model.seerrRecommendations.isEmpty {
+                        SeerrItemsRow(title: i18n.t("item:recommendations"), items: model.seerrRecommendations)
                     }
                 }
                 .padding(.bottom, 60)
@@ -106,362 +84,48 @@ struct ItemDetailView: View {
         .ignoresSafeArea()
         .background(PelagicaBackground())
         .task {
-            await loadFullItem()
-            await themeSong.play(for: item, appState: appState)
-            await loadLocalTrailers()
-            await laodSimilarItems()
-            await loadSeerrRecommendations()
-            if item.type == .series {
-                await loadNextEpisode()
-                await loadSeasons()
-            }
-            if item.type == .boxSet {
-                await loadBoxSetItems()
-            }
-            if item.type == .movie {
-                if configStore.config.itemPage?.showCollections != false {
-                    await loadItemCollections()
-                }
-            }
+            model.bind(appState: appState, configStore: configStore, seerrStore: seerrStore)
+            await model.load()
         }
         .onDisappear {
-            themeSong.stop()
+            model.stopThemeSong()
         }
-        .fullScreenCover(item: $playbackTarget) { target in
+        .fullScreenCover(item: $model.playbackTarget) { target in
             VideoPlayerView(item: target.item, startTicks: target.startTicks)
                 .ignoresSafeArea()
         }
-        .onChange(of: playbackTarget == nil) { wasNilBefore, isNilNow in
+        .onChange(of: model.playbackTarget == nil) { wasNilBefore, isNilNow in
             guard isNilNow, !wasNilBefore else { return }
-            Task {
-                await loadFullItem()
-                if item.type == .series {
-                    await loadNextEpisode()
-                    if let selectedSeasonID {
-                        await loadEpisodes(seasonID: selectedSeasonID)
-                    }
-                }
-                if item.type == .boxSet {
-                    await loadBoxSetItems()
-                }
-            }
+            Task { await model.playbackEnded() }
         }
     }
 
     private var heroSection: some View {
         ItemDetailHeroSection(
-            item: item,
-            isWatchlist: isWatchlist,
-            isTogglingWatchlist: isTogglingWatchlist,
-            isFavorite: isFavorite,
-            isTogglingFavorite: isTogglingFavorite,
-            isPlayed: item.userData?.isPlayed ?? false,
-            isTogglingPlayed: isTogglingPlayed,
-            trailerAvailable: !localTrailers.isEmpty || trailerURL != nil,
-            playLabel: playLabel,
+            item: model.item,
+            isWatchlist: model.isWatchlist,
+            isTogglingWatchlist: model.isTogglingWatchlist,
+            isFavorite: model.isFavorite,
+            isTogglingFavorite: model.isTogglingFavorite,
+            isPlayed: model.isPlayed,
+            isTogglingPlayed: model.isTogglingPlayed,
+            trailerAvailable: model.trailerAvailable,
+            playLabel: model.playLabel,
             namespace: heroNamespace,
             isPlayButtonFocused: $isPlayButtonFocused,
-            onPlay: play,
+            onPlay: model.play,
             onPlayTrailer: playTrailer,
-            onToggleWatchlist: toggleWatchlist,
-            onToggleFavorite: toggleFavorite,
-            onTogglePlayed: toggleItemPlayed,
-            seerrRoute: seerrRoute
+            onToggleWatchlist: model.toggleWatchlist,
+            onToggleFavorite: model.toggleFavorite,
+            onTogglePlayed: model.toggleItemPlayed,
+            seerrRoute: model.seerrRoute
         )
     }
 
-    private var seerrRoute: SeerrItemRoute? {
-        guard seerrStore.isLoggedIn, let mediaType = seerrMediaType,
-              let tmdbID = item.providerIDs?["Tmdb"].flatMap(Int.init) else { return nil }
-        return SeerrItemRoute(tmdbID: tmdbID, mediaType: mediaType, title: item.name)
-    }
-
-    private var seerrMediaType: SeerrMediaType? {
-        switch item.type {
-        case .movie: .movie
-        case .series: .tv
-        default: nil
-        }
-    }
-
-    private var playLabel: String {
-        if item.type == .series {
-            guard let nextEpisode else { return i18n.t("item:play") }
-            let season = nextEpisode.parentIndexNumber ?? 1
-            let episode = nextEpisode.indexNumber ?? 1
-            return i18n.t("item:play_episode", ["season": season, "episode": episode])
-        }
-
-        let playable = item.type == .boxSet ? nextBoxSetItem : item
-        guard let playable else { return i18n.t("item:play") }
-        let hasProgress = (playable.userData?.playbackPositionTicks ?? 0) > 0 && playable.userData?.isPlayed != true
-        return hasProgress ? i18n.t("resume") : i18n.t("item:play")
-    }
-
-    // MARK: - Actions
-
-    private func play() {
-        let target: BaseItemDto? = switch item.type {
-        case .series: nextEpisode
-        case .boxSet: nextBoxSetItem
-        default: item
-        }
-        guard let target else { return }
-        startPlayback(for: target)
-    }
-
     private func playTrailer() {
-        if !localTrailers.isEmpty, let firstTrailer = localTrailers.first {
-            startPlayback(for: firstTrailer)
-        } else if let trailerURL {
-            themeSong.stop()
+        if let trailerURL = model.playTrailer() {
             openURL(trailerURL)
         }
-    }
-    
-    private func playLocalTrailer(trailer: BaseItemDto) {
-        startPlayback(for: trailer)
-    }
-
-    private func startPlayback(for target: BaseItemDto) {
-        guard target.id != nil else { return }
-        themeSong.stop(fade: false)
-        let startTicks = target.userData?.playbackPositionTicks ?? 0
-        playbackTarget = PlaybackTarget(item: target, startTicks: startTicks)
-    }
-
-    private func toggleWatchlist() {
-        guard let client = appState.client, let id = item.id, !isTogglingWatchlist else { return }
-        let newValue = !isWatchlist
-        isWatchlist = newValue
-        isTogglingWatchlist = true
-
-        Task {
-            defer { isTogglingWatchlist = false }
-            do {
-                _ = try await client.send(Paths.updateItemUserData(
-                    itemID: id,
-                    userID: appState.currentUser?.id,
-                    UpdateUserItemDataDto(isLikes: newValue)
-                ))
-            } catch {
-                isWatchlist = !newValue
-            }
-        }
-    }
-
-    private func toggleFavorite() {
-        guard let client = appState.client, let id = item.id, !isTogglingFavorite else { return }
-        let newValue = !isFavorite
-        isFavorite = newValue
-        isTogglingFavorite = true
-
-        Task {
-            defer { isTogglingFavorite = false }
-            do {
-                _ = try await client.send(Paths.updateItemUserData(
-                    itemID: id,
-                    userID: appState.currentUser?.id,
-                    UpdateUserItemDataDto(isFavorite: newValue)
-                ))
-            } catch {
-                isFavorite = !newValue
-            }
-        }
-    }
-
-    private func toggleItemPlayed() {
-        guard let client = appState.client, let id = item.id, !isTogglingPlayed else { return }
-        let userID = appState.currentUser?.id
-        let markPlayed = item.userData?.isPlayed != true
-        isTogglingPlayed = true
-
-        Task {
-            defer { isTogglingPlayed = false }
-            do {
-                item.userData = try await client.send(markPlayed
-                    ? Paths.markPlayedItem(itemID: id, userID: userID)
-                    : Paths.markUnplayedItem(itemID: id, userID: userID)
-                ).value
-                appState.notifyWatchStateChanged()
-                if item.type == .series {
-                    if let selectedSeasonID {
-                        await loadEpisodes(seasonID: selectedSeasonID)
-                    }
-                    await loadNextEpisode()
-                }
-            } catch {
-                // The button keeps the previous state.
-            }
-        }
-    }
-
-    private func togglePlayed(_ episode: BaseItemDto) {
-        guard let client = appState.client, let id = episode.id else { return }
-        let userID = appState.currentUser?.id
-        let markPlayed = episode.userData?.isPlayed != true
-
-        Task {
-            do {
-                let userData = try await client.send(markPlayed
-                    ? Paths.markPlayedItem(itemID: id, userID: userID)
-                    : Paths.markUnplayedItem(itemID: id, userID: userID)
-                ).value
-                if let index = episodes.firstIndex(where: { $0.id == id }) {
-                    episodes[index].userData = userData
-                }
-                appState.notifyWatchStateChanged()
-                await loadFullItem()
-                await loadNextEpisode()
-            } catch {
-                // The episode keeps its previous state, which the menu still reflects.
-            }
-        }
-    }
-
-    // MARK: - Data loading
-
-    private func loadFullItem() async {
-        guard let client = appState.client, let id = item.id else { return }
-        do {
-            let full = try await client.send(Paths.getItem(itemID: id, userID: appState.currentUser?.id)).value
-            item = full
-            isWatchlist = full.userData?.isLikes ?? false
-            isFavorite = full.userData?.isFavorite ?? false
-        } catch {
-            // The stub data passed in from the grid is enough to render the page.
-        }
-    }
-
-    private func loadLocalTrailers() async {
-        guard let client = appState.client, let id = item.id, (item.localTrailerCount ?? 0) > 0 else { return }
-        do {
-            let trailers = try await client.send(Paths.getLocalTrailers(itemID: id, userID: appState.currentUser?.id)).value
-            localTrailers = trailers
-        } catch {
-            // Just leave trailers empty
-        }
-    }
-
-    private func loadNextEpisode() async {
-        guard let client = appState.client, let seriesID = item.id else { return }
-        do {
-            let nextUp = try await client.send(Paths.getNextUp(parameters: .init(
-                userID: appState.currentUser?.id,
-                limit: 1,
-                fields: [.overview],
-                seriesID: seriesID
-            ))).value
-            if let episode = nextUp.items?.first {
-                nextEpisode = episode
-                return
-            }
-
-            let episodes = try await client.send(Paths.getEpisodes(seriesID: seriesID, parameters: .init(
-                userID: appState.currentUser?.id,
-                fields: [.overview],
-                limit: 1
-            ))).value
-            nextEpisode = episodes.items?.first
-        } catch {
-            // The Play button just falls back to a generic label.
-        }
-    }
-
-    private func loadSeasons() async {
-        guard let client = appState.client, let seriesID = item.id else { return }
-        do {
-            let result = try await client.send(Paths.getSeasons(seriesID: seriesID, parameters: .init(
-                userID: appState.currentUser?.id
-            ))).value
-            seasons = result.items ?? []
-            selectedSeasonID = seasons.first(where: { $0.indexNumber == nextEpisode?.parentIndexNumber })?.id ?? seasons.first?.id
-        } catch {
-            // The episodes section just won't show if seasons fail to load.
-        }
-    }
-
-    private func loadEpisodes(seasonID: String) async {
-        guard let client = appState.client, let seriesID = item.id else { return }
-        do {
-            let result = try await client.send(Paths.getEpisodes(seriesID: seriesID, parameters: .init(
-                userID: appState.currentUser?.id,
-                fields: [.overview],
-                seasonID: seasonID,
-                enableUserData: true,
-            ))).value
-            episodes = result.items ?? []
-        } catch {
-            episodes = []
-        }
-    }
-
-    private func loadBoxSetItems() async {
-        guard let client = appState.client, let boxSetID = item.id else { return }
-        let sort = configStore.config.itemPage?.collectionSort ?? .premiereDateAsc
-        do {
-            let result = try await client.send(Paths.getItems(parameters: .init(
-                userID: appState.currentUser?.id,
-                parentID: boxSetID,
-                enableUserData: true
-            ))).value
-            boxSetItems = CollectionSorting.sort(result.items ?? [], by: sort)
-        } catch {
-            // The box set row just won't show if its items fail to load.
-        }
-    }
-
-    private func laodSimilarItems() async {
-        guard let client = appState.client, let itemID = item.id else { return }
-        do {
-            let result = try await client.send(Paths.getSimilarItems(itemID: itemID)).value
-            similarItems = result.items ?? []
-        } catch {
-            similarItems = []
-        }
-    }
-
-    private func loadSeerrRecommendations() async {
-        guard let route = seerrRoute else { return }
-        seerrRecommendations = await seerrStore.items {
-            try await $0.recommendations(mediaType: route.mediaType, tmdbID: route.tmdbID)
-        }
-    }
-
-    private func loadItemCollections() async {
-        guard let client = appState.client, let itemID = item.id else { return }
-        let sort = configStore.config.itemPage?.collectionSort ?? .premiereDateAsc
-        do {
-            let result = try await client.send(Paths.getItemCollections(itemID: itemID)).value
-            guard let colls = result.items else { return }
-            for coll in colls {
-                guard let collName = coll.name else { continue }
-                let result = try await client.send(Paths.getItems(parameters: .init(locationTypes: [LocationType.fileSystem], parentID: coll.id))).value
-                guard let items = result.items else { continue }
-                if items.isEmpty { continue }
-                collectionItems[collName] = CollectionSorting.sort(items, by: sort)
-            }
-        } catch {
-
-        }
-    }
-
-    // MARK: - Box set
-
-    private var nextBoxSetItem: BaseItemDto? {
-        let playable = CollectionSorting.sort(boxSetItems, by: .premiereDateAsc).filter { $0.isFolder != true }
-        let inProgress = playable.first {
-            ($0.userData?.playbackPositionTicks ?? 0) > 0 && $0.userData?.isPlayed != true
-        }
-        return inProgress
-            ?? playable.first { $0.userData?.isPlayed != true }
-            ?? playable.first
-    }
-
-    // MARK: - Trailer
-
-    private var trailerURL: URL? {
-        item.remoteTrailers?.first?.url.flatMap(URL.init(string:))
     }
 }
 

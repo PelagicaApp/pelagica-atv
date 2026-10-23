@@ -21,11 +21,7 @@ struct HomeMediaBar: View {
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var index = 0
-    @State private var nextEpisode: BaseItemDto?
-    @State private var isFavorite = false
-    @State private var isWatchlist = false
-    @State private var isTogglingFavorite = false
-    @State private var isTogglingWatchlist = false
+    @StateObject private var model = MediaBarModel()
     @State private var isScrolledIntoView = true
     @State private var isOnScreen = false
 
@@ -73,8 +69,8 @@ struct HomeMediaBar: View {
         .frame(height: 1100)
         .clipped()
         .task(id: currentItem?.id) {
-            syncUserDataState()
-            await loadNextEpisode()
+            model.bind(appState: appState)
+            await model.show(currentItem)
         }
         .task(id: AutoAdvanceKey(itemID: currentItem?.id, isActive: shouldAutoAdvance)) {
             guard shouldAutoAdvance else { return }
@@ -215,20 +211,20 @@ struct HomeMediaBar: View {
             .focused($focusedButton, equals: .play)
 
             if showFavoriteButton {
-                Button(action: toggleFavorite) {
-                    Label(isFavorite ? i18n.t("item:unfavorite") : i18n.t("item:favorite"), systemImage: isFavorite ? "heart.fill" : "heart")
+                Button(action: model.toggleFavorite) {
+                    Label(model.isFavorite ? i18n.t("item:unfavorite") : i18n.t("item:favorite"), systemImage: model.isFavorite ? "heart.fill" : "heart")
                 }
                 .buttonStyle(DetailActionButtonStyle(emphasis: .secondary))
-                .disabled(isTogglingFavorite)
+                .disabled(model.isTogglingFavorite)
                 .focused($focusedButton, equals: .favorite)
             }
 
             if showWatchlistButton {
-                Button(action: toggleWatchlist) {
-                    Label(isWatchlist ? i18n.t("item:remove_from_watchlist") : i18n.t("item:add_to_watchlist"), systemImage: isWatchlist ? "bookmark.fill" : "bookmark")
+                Button(action: model.toggleWatchlist) {
+                    Label(model.isWatchlist ? i18n.t("item:remove_from_watchlist") : i18n.t("item:add_to_watchlist"), systemImage: model.isWatchlist ? "bookmark.fill" : "bookmark")
                 }
                 .buttonStyle(DetailActionButtonStyle(emphasis: .secondary))
-                .disabled(isTogglingWatchlist)
+                .disabled(model.isTogglingWatchlist)
                 .focused($focusedButton, equals: .watchlist)
             }
 
@@ -247,77 +243,6 @@ struct HomeMediaBar: View {
         guard !items.isEmpty else { return }
         withAnimation(.easeInOut(duration: 0.4)) {
             index = (index + 1) % items.count
-        }
-    }
-
-    private func syncUserDataState() {
-        isFavorite = currentItem?.userData?.isFavorite ?? false
-        isWatchlist = currentItem?.userData?.isLikes ?? false
-    }
-
-    private func toggleFavorite() {
-        guard let client = appState.client, let id = currentItem?.id, !isTogglingFavorite else { return }
-        let newValue = !isFavorite
-        isFavorite = newValue
-        isTogglingFavorite = true
-
-        Task {
-            defer { isTogglingFavorite = false }
-            do {
-                _ = try await client.send(Paths.updateItemUserData(
-                    itemID: id,
-                    userID: appState.currentUser?.id,
-                    UpdateUserItemDataDto(isFavorite: newValue)
-                ))
-            } catch {
-                isFavorite = !newValue
-            }
-        }
-    }
-
-    private func toggleWatchlist() {
-        guard let client = appState.client, let id = currentItem?.id, !isTogglingWatchlist else { return }
-        let newValue = !isWatchlist
-        isWatchlist = newValue
-        isTogglingWatchlist = true
-
-        Task {
-            defer { isTogglingWatchlist = false }
-            do {
-                _ = try await client.send(Paths.updateItemUserData(
-                    itemID: id,
-                    userID: appState.currentUser?.id,
-                    UpdateUserItemDataDto(isLikes: newValue)
-                ))
-            } catch {
-                isWatchlist = !newValue
-            }
-        }
-    }
-
-    // MARK: - Data loading
-
-    private func loadNextEpisode() async {
-        nextEpisode = nil
-        guard let client = appState.client, currentItem?.type == .series, let seriesID = currentItem?.id else { return }
-        do {
-            let nextUp = try await client.send(Paths.getNextUp(parameters: .init(
-                userID: appState.currentUser?.id,
-                limit: 1,
-                seriesID: seriesID
-            ))).value
-            if let episode = nextUp.items?.first {
-                nextEpisode = episode
-                return
-            }
-
-            let episodes = try await client.send(Paths.getEpisodes(seriesID: seriesID, parameters: .init(
-                userID: appState.currentUser?.id,
-                limit: 1
-            ))).value
-            nextEpisode = episodes.items?.first
-        } catch {
-            // The Play button just falls back to a generic label.
         }
     }
 

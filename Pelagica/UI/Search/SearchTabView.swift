@@ -4,8 +4,6 @@
 //
 
 import SwiftUI
-import JellyfinAPI
-import Get
 
 struct SearchTabView: View {
     @EnvironmentObject private var appState: AppState
@@ -14,14 +12,8 @@ struct SearchTabView: View {
     @Namespace private var namespace
     @FocusState private var isGridFocused: Bool
     
-    @State private var results: [BaseItemDto] = []
-    @State private var seerrResults: [SeerrMediaItem] = []
-    @State private var errorMessage: String?
-    @State private var isLoading = false
+    @StateObject private var model = SearchModel()
     @State private var path = NavigationPath()
-    @State private var query = ""
-
-    let resultsCount = 25
 
     private let columns = [GridItem(.adaptive(minimum: 280), spacing: 40)]
 
@@ -32,10 +24,10 @@ struct SearchTabView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 32) {
-                        if let errorMessage {
+                        if let errorMessage = model.errorMessage {
                             Text(errorMessage)
                                 .foregroundStyle(.secondary)
-                        } else if isLoading && results.isEmpty && seerrResults.isEmpty {
+                        } else if model.isLoading && model.hasNoResults {
                             LazyVGrid(columns: columns, spacing: 60) {
                                 ForEach(0..<10, id: \.self) { _ in
                                     SkeletonView()
@@ -44,14 +36,14 @@ struct SearchTabView: View {
                                 }
                             }
                             .focusSection()
-                        } else if results.isEmpty && seerrResults.isEmpty {
+                        } else if model.hasNoResults {
                             emptyState
                                 .focusSection()
                         } else {
-                            if !results.isEmpty {
+                            if !model.results.isEmpty {
                                 LazyVGrid(columns: columns, spacing: 60) {
-                                    ForEach(results.indices, id: \.self) { index in
-                                        ItemCard(item: results[index])
+                                    ForEach(model.results.indices, id: \.self) { index in
+                                        ItemCard(item: model.results[index])
                                             .prefersDefaultFocus(index == 0, in: namespace)
                                     }
                                 }
@@ -59,7 +51,7 @@ struct SearchTabView: View {
                                 .focusSection()
                             }
 
-                            if !seerrResults.isEmpty {
+                            if !model.seerrResults.isEmpty {
                                 seerrSection
                             }
                         }
@@ -68,20 +60,12 @@ struct SearchTabView: View {
                 }
             }
             .pelagicaDestinations()
-            .searchable(text: $query, prompt: i18n.t("search"))
+            .searchable(text: $model.query, prompt: i18n.t("search"))
         }
         .onDisappear { path = NavigationPath() }
-        .task(id: query) {
-            try? await Task.sleep(for: .milliseconds(300))
-            guard !Task.isCancelled else { return }
-
-            results = []
-            seerrResults = []
-            isLoading = true
-            async let seerrSearch: Void = searchSeerr()
-            await search()
-            await seerrSearch
-            isLoading = false
+        .task(id: model.query) {
+            model.bind(appState: appState, seerrStore: seerrStore)
+            await model.search()
         }
     }
 
@@ -92,12 +76,12 @@ struct SearchTabView: View {
                 .foregroundStyle(.white)
 
             LazyVGrid(columns: columns, spacing: 60) {
-                ForEach(seerrResults) { item in
+                ForEach(model.seerrResults) { item in
                     SeerrItemCard(item: item)
                 }
             }
         }
-        .padding(.top, results.isEmpty ? 0 : 40)
+        .padding(.top, model.results.isEmpty ? 0 : 40)
         .focusSection()
     }
 
@@ -117,34 +101,6 @@ struct SearchTabView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 100)
-    }
-    
-    private func searchSeerr() async {
-        let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return }
-        let items = await seerrStore.items { try await $0.search(query: query) }
-        guard !Task.isCancelled else { return }
-        seerrResults = items.filter { $0.status != .available }
-    }
-
-    private func search() async {
-        guard let client = appState.client else { return }
-        do {
-            let result = try await client.send(Paths.getItems(parameters: .init(
-                userID: appState.currentUser?.id,
-                locationTypes: [LocationType.fileSystem],
-                limit: resultsCount,
-                isRecursive: true,
-                searchTerm: query,
-                fields: [.overview, .parentID],
-                includeItemTypes: [.movie, .series],
-                enableUserData: true,
-            ))).value
-            results = result.items ?? []
-        } catch is CancellationError {
-        } catch {
-            errorMessage = i18n.t("search:error_occurred_while_searching")
-        }
     }
 }
 

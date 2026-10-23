@@ -7,24 +7,51 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1A05000130C0000100000001 /* JellyfinAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 1A05000230C0000100000001 /* JellyfinAPI */; };
+		1A05000330C0000100000001 /* VLCKitSPM in Frameworks */ = {isa = PBXBuildFile; productRef = 1A05000430C0000100000001 /* VLCKitSPM */; };
+		1A05000530C0000100000001 /* PelagicaI18n in Frameworks */ = {isa = PBXBuildFile; productRef = 1A05000630C0000100000001 /* PelagicaI18n */; };
 		3D72E953304D968900733911 /* JellyfinAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 3D72E952304D968900733911 /* JellyfinAPI */; };
 		3DDCF42E3057026D00AD144C /* VLCKitSPM in Frameworks */ = {isa = PBXBuildFile; productRef = ADEC04E562074E819CB77DCD /* VLCKitSPM */; };
 		5E1A7C0330B2F00100A1B2C3 /* PelagicaI18n in Frameworks */ = {isa = PBXBuildFile; productRef = 5E1A7C0230B2F00100A1B2C3 /* PelagicaI18n */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		1A05000730C0000100000001 /* Pelagica.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pelagica.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3D72E93D304D940200733911 /* Pelagica.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pelagica.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		1A05001030C0000100000001 /* Exceptions for "Pelagica" folder in "Pelagica iOS" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				LaunchScreen.storyboard,
+			);
+			target = 1A05000830C0000100000001 /* Pelagica iOS */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3D72E93F304D940200733911 /* Pelagica */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				1A05001030C0000100000001 /* Exceptions for "Pelagica" folder in "Pelagica iOS" target */,
+			);
 			path = Pelagica;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		1A05000930C0000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A05000330C0000100000001 /* VLCKitSPM in Frameworks */,
+				1A05000130C0000100000001 /* JellyfinAPI in Frameworks */,
+				1A05000530C0000100000001 /* PelagicaI18n in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		3D72E93A304D940200733911 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -50,6 +77,7 @@
 			isa = PBXGroup;
 			children = (
 				3D72E93D304D940200733911 /* Pelagica.app */,
+				1A05000730C0000100000001 /* Pelagica.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -57,6 +85,31 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		1A05000830C0000100000001 /* Pelagica iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1A05000D30C0000100000001 /* Build configuration list for PBXNativeTarget "Pelagica iOS" */;
+			buildPhases = (
+				1A05000A30C0000100000001 /* Sources */,
+				1A05000930C0000100000001 /* Frameworks */,
+				1A05000B30C0000100000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				3D72E93F304D940200733911 /* Pelagica */,
+			);
+			name = "Pelagica iOS";
+			packageProductDependencies = (
+				1A05000230C0000100000001 /* JellyfinAPI */,
+				1A05000430C0000100000001 /* VLCKitSPM */,
+				1A05000630C0000100000001 /* PelagicaI18n */,
+			);
+			productName = "Pelagica iOS";
+			productReference = 1A05000730C0000100000001 /* Pelagica.app */;
+			productType = "com.apple.product-type.application";
+		};
 		3D72E93C304D940200733911 /* Pelagica */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 3D72E948304D940200733911 /* Build configuration list for PBXNativeTarget "Pelagica" */;
@@ -92,6 +145,9 @@
 				LastSwiftUpdateCheck = 2660;
 				LastUpgradeCheck = 2660;
 				TargetAttributes = {
+					1A05000830C0000100000001 = {
+						CreatedOnToolsVersion = 27.0;
+					};
 					3D72E93C304D940200733911 = {
 						CreatedOnToolsVersion = 26.6;
 					};
@@ -117,11 +173,19 @@
 			projectRoot = "";
 			targets = (
 				3D72E93C304D940200733911 /* Pelagica */,
+				1A05000830C0000100000001 /* Pelagica iOS */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		1A05000B30C0000100000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		3D72E93B304D940200733911 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -132,6 +196,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		1A05000A30C0000100000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		3D72E939304D940200733911 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -142,6 +213,84 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		1A05000E30C0000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7T2RLCKU8X;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Pelagica looks for Jellyfin servers on your local network.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIBackgroundModes = audio;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.pelagica.ios.Pelagica;
+				PRODUCT_NAME = Pelagica;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		1A05000F30C0000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7T2RLCKU8X;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Pelagica looks for Jellyfin servers on your local network.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIBackgroundModes = audio;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.pelagica.ios.Pelagica;
+				PRODUCT_NAME = Pelagica;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		3D72E946304D940200733911 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -332,6 +481,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		1A05000D30C0000100000001 /* Build configuration list for PBXNativeTarget "Pelagica iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A05000E30C0000100000001 /* Debug */,
+				1A05000F30C0000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		3D72E938304D940200733911 /* Build configuration list for PBXProject "Pelagica" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -380,6 +538,21 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		1A05000230C0000100000001 /* JellyfinAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3D72E951304D968900733911 /* XCRemoteSwiftPackageReference "jellyfin-sdk-swift" */;
+			productName = JellyfinAPI;
+		};
+		1A05000430C0000100000001 /* VLCKitSPM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A12597F316C009C158E869A1 /* XCRemoteSwiftPackageReference "vlckit-spm" */;
+			productName = VLCKitSPM;
+		};
+		1A05000630C0000100000001 /* PelagicaI18n */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5E1A7C0130B2F00100A1B2C3 /* XCRemoteSwiftPackageReference "i18n" */;
+			productName = PelagicaI18n;
+		};
 		3D72E952304D968900733911 /* JellyfinAPI */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 3D72E951304D968900733911 /* XCRemoteSwiftPackageReference "jellyfin-sdk-swift" */;

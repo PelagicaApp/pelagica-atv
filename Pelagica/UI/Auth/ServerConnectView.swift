@@ -10,10 +10,7 @@ struct ServerConnectView: View {
     @EnvironmentObject private var appState: AppState
     @Binding var path: NavigationPath
 
-    @State private var address = ""
-    @State private var isConnecting = false
-    @State private var errorMessage: String?
-    @State private var discoveredServers: [JellyfinClient.PublicServer] = []
+    @StateObject private var model = ServerConnectModel()
 
     var body: some View {
         PelagicaScreen {
@@ -23,17 +20,17 @@ struct ServerConnectView: View {
                 Text(i18n.t("login:enter_manually"))
                     .foregroundStyle(.secondary)
 
-                PelagicaField(placeholder: "jellyfin.example.com", text: $address, label: i18n.t("login:server_address"), contentType: .URL, onCommit: connectManually)
+                PelagicaField(placeholder: "jellyfin.example.com", text: $model.address, label: i18n.t("login:server_address"), contentType: .URL, onCommit: connectManually)
 
                 Button {
                     connectManually()
                 } label: {
-                    Text(isConnecting ? i18n.t("login:connecting") : i18n.t("login:connect"))
+                    Text(model.isConnecting ? i18n.t("login:connecting") : i18n.t("login:connect"))
                 }
                 .buttonStyle(PelagicaButtonStyle(emphasis: .primary))
-                .disabled(address.trimmingCharacters(in: .whitespaces).isEmpty || isConnecting)
+                .disabled(!model.canConnect)
 
-                if let errorMessage {
+                if let errorMessage = model.errorMessage {
                     Text(errorMessage)
                         .foregroundStyle(.red)
                         .font(.callout)
@@ -50,13 +47,13 @@ struct ServerConnectView: View {
             }
             .frame(maxWidth: 700)
 
-            if !discoveredServers.isEmpty {
+            if !model.discoveredServers.isEmpty {
                 VStack(alignment: .leading, spacing: 16) {
                     Text(i18n.t("login:discovered_servers"))
                         .foregroundStyle(.secondary)
 
                     VStack(spacing: 12) {
-                        ForEach(discoveredServers) { server in
+                        ForEach(model.discoveredServers) { server in
                             Button {
                                 path.append(AuthRoute.loginMethod(DiscoveredServer(name: server.name, url: server.url)))
                             } label: {
@@ -75,31 +72,14 @@ struct ServerConnectView: View {
                 .frame(maxWidth: 700)
             }
         }
-        .task { await discoverServers() }
-    }
-
-    private func discoverServers() async {
-        do {
-            for try await server in JellyfinClient.discover() {
-                if !discoveredServers.contains(server) {
-                    discoveredServers.append(server)
-                }
-            }
-        } catch {
-        }
+        .task { await model.discoverServers() }
     }
 
     private func connectManually() {
-        guard !address.trimmingCharacters(in: .whitespaces).isEmpty, !isConnecting else { return }
-        errorMessage = nil
-        isConnecting = true
+        guard model.canConnect else { return }
         Task {
-            defer { isConnecting = false }
-            do {
-                let server = try await appState.resolveServer(fromInput: address)
+            if let server = await model.connect(appState: appState) {
                 path.append(AuthRoute.loginMethod(server))
-            } catch {
-                errorMessage = i18n.t("login:could_not_find_server")
             }
         }
     }

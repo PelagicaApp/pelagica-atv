@@ -10,20 +10,12 @@ struct SeerrItemDetailView: View {
     @EnvironmentObject private var seerrStore: SeerrStore
     @Environment(\.openURL) private var openURL
 
-    let route: SeerrItemRoute
-
-    @State private var details: SeerrDetails?
-    @State private var loadFailed = false
-    @State private var recommendations: [SeerrMediaItem] = []
-    @State private var deselectedSeasons: Set<Int> = []
-    @State private var isRequesting = false
-    @State private var requestResult: RequestResult?
+    @StateObject private var model: SeerrItemDetailModel
 
     @Namespace private var heroNamespace
 
-    private enum RequestResult {
-        case success
-        case failure
+    init(route: SeerrItemRoute) {
+        _model = StateObject(wrappedValue: SeerrItemDetailModel(route: route))
     }
 
     var body: some View {
@@ -35,12 +27,12 @@ struct SeerrItemDetailView: View {
                         .focusScope(heroNamespace)
                         .focusSection()
 
-                    if details?.mediaType == .tv, !visibleSeasons.isEmpty {
+                    if model.details?.mediaType == .tv, !model.visibleSeasons.isEmpty {
                         seasonsSection
                     }
 
-                    if !recommendations.isEmpty {
-                        SeerrItemsRow(title: i18n.t("item:recommendations"), items: recommendations)
+                    if !model.recommendations.isEmpty {
+                        SeerrItemsRow(title: i18n.t("item:recommendations"), items: model.recommendations)
                     }
                 }
                 .padding(.bottom, 60)
@@ -49,10 +41,8 @@ struct SeerrItemDetailView: View {
         .ignoresSafeArea()
         .background(PelagicaBackground())
         .task {
-            await loadDetails()
-            recommendations = await seerrStore.items {
-                try await $0.recommendations(mediaType: route.mediaType, tmdbID: route.tmdbID)
-            }
+            model.bind(seerrStore: seerrStore)
+            await model.load()
         }
     }
 
@@ -61,7 +51,7 @@ struct SeerrItemDetailView: View {
     private var hero: some View {
         ZStack {
             ZStack {
-                AsyncImage(url: SeerrImage.backdrop(details?.backdropPath)) { phase in
+                AsyncImage(url: SeerrImage.backdrop(model.details?.backdropPath)) { phase in
                     if let image = phase.image {
                         image.resizable().scaledToFill()
                     }
@@ -75,12 +65,12 @@ struct SeerrItemDetailView: View {
                 poster
 
                 VStack(alignment: .leading, spacing: 24) {
-                    Text(details?.title ?? route.title ?? "")
+                    Text(model.details?.title ?? model.route.title ?? "")
                         .font(.system(size: 56, weight: .bold))
                         .foregroundStyle(.white)
                         .lineLimit(2)
 
-                    if let details {
+                    if let details = model.details {
                         badgesRow(details)
 
                         if !details.genres.isEmpty {
@@ -98,12 +88,12 @@ struct SeerrItemDetailView: View {
 
                         buttonsRow(details)
 
-                        if let requestResult {
+                        if let requestResult = model.requestResult {
                             Text(requestResult == .success ? i18n.t("seerr:seerr_request_success") : i18n.t("seerr:seerr_request_failed"))
                                 .font(.system(size: 22, weight: .medium))
                                 .foregroundStyle(requestResult == .success ? .green : .red)
                         }
-                    } else if loadFailed {
+                    } else if model.loadFailed {
                         Text(i18n.t("seerr:seerr_failed_to_load"))
                             .font(.system(size: 24))
                             .foregroundStyle(.secondary)
@@ -125,14 +115,14 @@ struct SeerrItemDetailView: View {
         ZStack {
             Color.white.opacity(0.06)
 
-            AsyncImage(url: SeerrImage.poster(details?.posterPath)) { phase in
+            AsyncImage(url: SeerrImage.poster(model.details?.posterPath)) { phase in
                 ZStack {
                     SkeletonView()
-                        .opacity(phase.image == nil && details == nil ? 1 : 0)
+                        .opacity(phase.image == nil && model.details == nil ? 1 : 0)
                     Image(systemName: "film")
                         .font(.system(size: 48))
                         .foregroundStyle(.white.opacity(0.3))
-                        .opacity(phase.image == nil && details != nil ? 1 : 0)
+                        .opacity(phase.image == nil && model.details != nil ? 1 : 0)
                     if let image = phase.image {
                         image.resizable().scaledToFill()
                     }
@@ -162,12 +152,12 @@ struct SeerrItemDetailView: View {
 
     private func buttonsRow(_ details: SeerrDetails) -> some View {
         FlowLayout(horizontalSpacing: 20, verticalSpacing: 20) {
-            if showsRequestButton {
-                Button(action: request) {
+            if model.showsRequestButton {
+                Button(action: model.request) {
                     Label {
-                        Text(requestLabel)
+                        Text(model.requestLabel)
                     } icon: {
-                        if isRequesting {
+                        if model.isRequesting {
                             ProgressView()
                                 .tint(.white.opacity(0.6))
                                 .scaleEffect(0.6)
@@ -178,16 +168,16 @@ struct SeerrItemDetailView: View {
                     }
                 }
                 .buttonStyle(DetailActionButtonStyle(emphasis: .primary))
-                .disabled(isRequesting || (details.mediaType == .tv && selectedSeasons.isEmpty))
+                .disabled(model.isRequesting || (details.mediaType == .tv && model.selectedSeasons.isEmpty))
                 .prefersDefaultFocus(true, in: heroNamespace)
             }
 
-            if let libraryRoute {
+            if let libraryRoute = model.libraryRoute {
                 NavigationLink(value: libraryRoute) {
                     Label(i18n.t("seerr:seerr_open_in_library"), systemImage: "play.fill")
                 }
-                .buttonStyle(DetailActionButtonStyle(emphasis: showsRequestButton ? .secondary : .primary))
-                .prefersDefaultFocus(!showsRequestButton, in: heroNamespace)
+                .buttonStyle(DetailActionButtonStyle(emphasis: model.showsRequestButton ? .secondary : .primary))
+                .prefersDefaultFocus(!model.showsRequestButton, in: heroNamespace)
             }
 
             if let trailerURL = details.trailerURL {
@@ -202,20 +192,6 @@ struct SeerrItemDetailView: View {
         .padding(.top, 10)
     }
 
-    private var requestLabel: String {
-        if isRequesting { return i18n.t("seerr:seerr_requesting") }
-        if details?.mediaType == .tv, !selectedSeasons.isEmpty {
-            return i18n.t("seerr:seerr_request_seasons_count", count: selectedSeasons.count)
-        }
-        return i18n.t("seerr:seerr_request")
-    }
-
-    private var libraryRoute: ItemDetailRoute? {
-        guard let details, let jellyfinID = details.mediaInfo?.jellyfinMediaId,
-              details.status == .available || details.status == .partiallyAvailable else { return nil }
-        return ItemDetailRoute(item: BaseItemDto(id: jellyfinID, name: details.title))
-    }
-
     // MARK: - Seasons
 
     private var seasonsSection: some View {
@@ -227,16 +203,16 @@ struct SeerrItemDetailView: View {
 
                 Spacer()
 
-                if !requestableSeasons.isEmpty {
-                    Button(action: toggleAllSeasons) {
-                        Text(allSeasonsSelected ? i18n.t("seerr:seerr_deselect_all") : i18n.t("seerr:seerr_select_all"))
+                if !model.requestableSeasons.isEmpty {
+                    Button(action: model.toggleAllSeasons) {
+                        Text(model.allSeasonsSelected ? i18n.t("seerr:seerr_deselect_all") : i18n.t("seerr:seerr_select_all"))
                     }
                     .buttonStyle(DetailActionButtonStyle(emphasis: .secondary))
                 }
             }
 
             VStack(spacing: 16) {
-                ForEach(visibleSeasons, id: \.seasonNumber) { season in
+                ForEach(model.visibleSeasons, id: \.seasonNumber) { season in
                     seasonRow(season)
                 }
             }
@@ -246,16 +222,11 @@ struct SeerrItemDetailView: View {
     }
 
     private func seasonRow(_ season: SeerrSeason) -> some View {
-        let isRequestable = requestableSeasons.contains(season)
-        let isSelected = selectedSeasons.contains(season.seasonNumber)
+        let isRequestable = model.requestableSeasons.contains(season)
+        let isSelected = model.selectedSeasons.contains(season.seasonNumber)
 
         return Button {
-            guard isRequestable else { return }
-            if isSelected {
-                deselectedSeasons.insert(season.seasonNumber)
-            } else {
-                deselectedSeasons.remove(season.seasonNumber)
-            }
+            model.toggleSeason(season)
         } label: {
             HStack(spacing: 24) {
                 Image(systemName: isRequestable ? (isSelected ? "checkmark.square.fill" : "square") : "square.dashed")
@@ -275,85 +246,10 @@ struct SeerrItemDetailView: View {
 
                 Spacer()
 
-                SeerrStatusBadge(status: seasonStatuses[season.seasonNumber] ?? .unknown)
+                SeerrStatusBadge(status: model.seasonStatuses[season.seasonNumber] ?? .unknown)
             }
         }
         .buttonStyle(SeasonRowButtonStyle())
-    }
-
-    /// Season availability, with seasons that have an open request counted as pending.
-    private var seasonStatuses: [Int: SeerrMediaStatus] {
-        var statuses: [Int: SeerrMediaStatus] = [:]
-        for season in details?.mediaInfo?.seasons ?? [] {
-            statuses[season.seasonNumber] = season.status
-        }
-        for request in details?.mediaInfo?.requests ?? [] where request.status != .declined {
-            for season in request.seasons ?? [] where (statuses[season.seasonNumber] ?? .unknown) == .unknown {
-                statuses[season.seasonNumber] = .pending
-            }
-        }
-        return statuses
-    }
-
-    private var visibleSeasons: [SeerrSeason] {
-        (details?.seasons ?? []).filter { $0.seasonNumber != 0 && $0.episodeCount != 0 }
-    }
-
-    private var requestableSeasons: [SeerrSeason] {
-        let statuses = seasonStatuses
-        return visibleSeasons.filter { (statuses[$0.seasonNumber] ?? .unknown) == .unknown }
-    }
-
-    private var selectedSeasons: [Int] {
-        requestableSeasons.map(\.seasonNumber).filter { !deselectedSeasons.contains($0) }
-    }
-
-    private var allSeasonsSelected: Bool {
-        !requestableSeasons.isEmpty && selectedSeasons.count == requestableSeasons.count
-    }
-
-    private var showsRequestButton: Bool {
-        guard let details else { return false }
-        return details.mediaType == .tv ? !requestableSeasons.isEmpty : details.status == .unknown
-    }
-
-    private func toggleAllSeasons() {
-        deselectedSeasons = allSeasonsSelected ? Set(requestableSeasons.map(\.seasonNumber)) : []
-    }
-
-    // MARK: - Actions
-
-    private func request() {
-        guard let details, !isRequesting else { return }
-        let seasons = details.mediaType == .tv ? selectedSeasons : nil
-        if details.mediaType == .tv, seasons?.isEmpty != false { return }
-
-        isRequesting = true
-        requestResult = nil
-        Task {
-            defer { isRequesting = false }
-            do {
-                try await seerrStore.perform {
-                    try await $0.request(mediaType: details.mediaType, tmdbID: details.tmdbID, seasons: seasons)
-                }
-                requestResult = .success
-                deselectedSeasons = []
-                await loadDetails()
-            } catch {
-                requestResult = .failure
-            }
-        }
-    }
-
-    private func loadDetails() async {
-        do {
-            details = try await seerrStore.perform {
-                try await $0.details(mediaType: route.mediaType, tmdbID: route.tmdbID)
-            }
-            loadFailed = false
-        } catch {
-            loadFailed = details == nil
-        }
     }
 }
 
