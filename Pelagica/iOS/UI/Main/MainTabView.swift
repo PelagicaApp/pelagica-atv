@@ -12,6 +12,7 @@ struct MainTabView: View {
     @StateObject private var seerrStore = SeerrStore()
     @StateObject private var playerPresenter = PlayerPresenter()
     @State private var isShowingSettings = false
+    @State private var isShowingQuickConnect = false
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(Translations.languageDefaultsKey) private var languageOverride: String?
 
@@ -33,10 +34,17 @@ struct MainTabView: View {
                 }
                 .id(languageOverride)
                 .environment(\.showSettings, ShowSettingsAction { isShowingSettings = true })
+                .environment(\.showQuickConnect, ShowSettingsAction { isShowingQuickConnect = true })
                 .sheet(isPresented: $isShowingSettings) {
                     SettingsView()
                         .presentationDetents([.large])
                         .presentationDragIndicator(.visible)
+                }
+                .sheet(isPresented: $isShowingQuickConnect) {
+                    NavigationStack {
+                        QuickConnectAuthorizeView()
+                    }
+                    .presentationDragIndicator(.visible)
                 }
                 .playerCover($playerPresenter.target)
             }

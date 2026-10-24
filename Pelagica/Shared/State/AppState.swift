@@ -198,7 +198,14 @@ final class AppState: ObservableObject {
         let result = try await newClient.signIn(quickConnectSecret: secret)
         try completeSignIn(client: newClient, result: result, server: server)
     }
-    
+
+    /// Approves another device's pending Quick Connect request as the current user.
+    func authorizeQuickConnect(code: String) async throws -> Bool {
+        guard let client else { return false }
+        let data = try await client.send(Paths.authorizeQuickConnect(code: code, userID: currentUser?.id)).value
+        return String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines) == "true"
+    }
+
     // MARK: - Profiles
     
     func profileImageURL(for profile: Profile) -> URL? {

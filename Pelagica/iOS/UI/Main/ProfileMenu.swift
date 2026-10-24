@@ -16,6 +16,7 @@ struct ShowSettingsAction: Equatable {
 
 extension EnvironmentValues {
     @Entry var showSettings = ShowSettingsAction()
+    @Entry var showQuickConnect = ShowSettingsAction()
 }
 
 extension View {
@@ -32,6 +33,7 @@ struct ProfileMenuButton: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var seerrStore: SeerrStore
     @Environment(\.showSettings) private var showSettings
+    @Environment(\.showQuickConnect) private var showQuickConnect
 
     @State private var menuImages: [UUID: UIImage] = [:]
 
@@ -55,6 +57,10 @@ struct ProfileMenuButton: View {
             }
 
             Section {
+                Button(i18n.t("sidebar:authorize_quick_connect"), systemImage: "qrcode.viewfinder") {
+                    showQuickConnect()
+                }
+
                 Button(i18n.t("settings:title"), systemImage: "gearshape") {
                     showSettings()
                 }

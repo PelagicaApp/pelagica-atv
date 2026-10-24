@@ -234,6 +234,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Info-iOS.plist";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Pelagica uses the camera to scan Quick Connect QR codes from your other devices.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Pelagica looks for Jellyfin servers on your local network.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
@@ -273,6 +274,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Info-iOS.plist";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Pelagica uses the camera to scan Quick Connect QR codes from your other devices.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Pelagica looks for Jellyfin servers on your local network.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
