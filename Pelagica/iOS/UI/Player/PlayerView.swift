@@ -15,6 +15,11 @@ struct PlayerView: View {
     @AppStorage("playerDisplayMode") private var displayMode: PlayerDisplayMode = .fit
     @State private var surfaceSize: CGSize = .zero
     @State private var isRotating = false
+    @State private var dismissDragOffset: CGFloat = 0
+    @State private var isDismissDragging = false
+
+    private static let dismissDistance: CGFloat = 120
+    private static let dismissPredictedDistance: CGFloat = 320
 
     init(item: BaseItemDto, startTicks: Int = 0) {
         _session = StateObject(wrappedValue: PlaybackSession(item: item, startTicks: startTicks))
@@ -24,30 +29,35 @@ struct PlayerView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            VLCVideoSurface(view: session.controller.videoView)
-                .onGeometryChange(for: CGSize.self, of: \.size) { surfaceSize = $0 }
-                .ignoresSafeArea(edges: displayMode == .safeArea ? .vertical : .all)
+            ZStack {
+                VLCVideoSurface(view: session.controller.videoView)
+                    .onGeometryChange(for: CGSize.self, of: \.size) { surfaceSize = $0 }
+                    .ignoresSafeArea(edges: displayMode == .safeArea ? .vertical : .all)
 
-            if isAwaitingLandscape {
-                loadingIndicator
-            } else if session.didFailToResolve {
-                VStack(spacing: 20) {
-                    Text(i18n.t("player:playbackDecodeErrorFailed"))
-                        .font(.headline)
-                        .multilineTextAlignment(.center)
-                    Button(i18n.t("close")) { dismiss() }
-                        .buttonStyle(.borderedProminent)
+                if isAwaitingLandscape {
+                    loadingIndicator
+                } else if session.didFailToResolve {
+                    VStack(spacing: 20) {
+                        Text(i18n.t("player:playbackDecodeErrorFailed"))
+                            .font(.headline)
+                            .multilineTextAlignment(.center)
+                        Button(i18n.t("close")) { dismiss() }
+                            .buttonStyle(.borderedProminent)
+                    }
+                    .foregroundStyle(.white)
+                    .padding()
+                } else if session.isLoaded {
+                    PlayerControls(session: session, controller: session.controller, onClose: { dismiss() })
+                } else {
+                    loadingIndicator
                 }
-                .foregroundStyle(.white)
-                .padding()
-            } else if session.isLoaded {
-                PlayerControls(session: session, controller: session.controller, onClose: { dismiss() })
-            } else {
-                loadingIndicator
             }
+            .scaleEffect(dismissScale, anchor: .top)
+            .offset(y: dismissDragOffset)
         }
         .background(PlayerOrientationController(isRotating: $isRotating))
         .simultaneousGesture(displayModeGesture)
+        .simultaneousGesture(dismissGesture)
         .sensoryFeedback(.selection, trigger: displayMode)
         .onChange(of: displayMode, initial: true) { applyCrop() }
         .onChange(of: surfaceSize) { applyCrop() }
@@ -76,6 +86,36 @@ struct PlayerView: View {
         ProgressView()
             .tint(.white)
             .controlSize(.large)
+    }
+
+    // MARK: Swipe to dismiss
+
+    private var dismissScale: CGFloat {
+        guard surfaceSize.height > 0 else { return 1 }
+        return max(0.8, 1 - dismissDragOffset / surfaceSize.height * 0.4)
+    }
+
+    private var dismissGesture: some Gesture {
+        DragGesture(minimumDistance: 20)
+            .onChanged { value in
+                let translation = value.translation
+                if !isDismissDragging {
+                    guard !session.controller.isScrubbing,
+                          translation.height > 0,
+                          translation.height > abs(translation.width) else { return }
+                    isDismissDragging = true
+                }
+                dismissDragOffset = max(0, translation.height)
+            }
+            .onEnded { value in
+                guard isDismissDragging else { return }
+                isDismissDragging = false
+                if value.translation.height > Self.dismissDistance || value.predictedEndTranslation.height > Self.dismissPredictedDistance {
+                    dismiss()
+                } else {
+                    withAnimation(.spring(duration: 0.3)) { dismissDragOffset = 0 }
+                }
+            }
     }
 
     // MARK: Display mode
