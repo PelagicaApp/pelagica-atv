@@ -10,6 +10,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var seerrStore: SeerrStore
+    @Environment(\.dismiss) private var dismiss
     @AppStorage(ThemeSongPlayer.enabledDefaultsKey) private var playThemeSongs = true
 
     var body: some View {
@@ -18,14 +19,6 @@ struct SettingsView: View {
                 Section(i18n.t("settings:account_section_title")) {
                     accountRow
 
-                    Button(i18n.t("profiles:switch_profile"), systemImage: "person.2") {
-                        appState.switchProfile()
-                    }
-
-                    Button(i18n.t("sidebar:logout"), systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
-                        seerrStore.logout()
-                        appState.signOut()
-                    }
                 }
 
                 if seerrStore.isConfigured {
@@ -71,6 +64,12 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle(i18n.t("settings:title"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(role: .confirm) { dismiss() }
+                }
+            }
         }
     }
 

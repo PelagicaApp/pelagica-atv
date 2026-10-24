@@ -29,6 +29,7 @@ struct LibrariesView: View {
                 }
             }
             .navigationTitle(i18n.t("library:title"))
+            .profileToolbar()
             .appDestinations()
         }
         .task { await model.load(appState: appState) }

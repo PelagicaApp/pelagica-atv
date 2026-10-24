@@ -11,6 +11,7 @@ struct MainTabView: View {
     @StateObject private var configStore = AppConfigStore()
     @StateObject private var seerrStore = SeerrStore()
     @StateObject private var playerPresenter = PlayerPresenter()
+    @State private var isShowingSettings = false
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(Translations.languageDefaultsKey) private var languageOverride: String?
 
@@ -26,14 +27,17 @@ struct MainTabView: View {
                     Tab(i18n.t("library:title"), systemImage: "books.vertical.fill") {
                         LibrariesView()
                     }
-                    Tab(i18n.t("settings:title"), systemImage: "gearshape.fill") {
-                        SettingsView()
-                    }
                     Tab(i18n.t("search"), systemImage: "magnifyingglass", role: .search) {
                         SearchView()
                     }
                 }
                 .id(languageOverride)
+                .environment(\.showSettings, ShowSettingsAction { isShowingSettings = true })
+                .sheet(isPresented: $isShowingSettings) {
+                    SettingsView()
+                        .presentationDetents([.large])
+                        .presentationDragIndicator(.visible)
+                }
                 .playerCover($playerPresenter.target)
             }
         }

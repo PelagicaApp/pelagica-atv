@@ -51,7 +51,9 @@ struct HomeView: View {
             }
             .ignoresSafeArea(edges: model.hasMediaBarSection ? .top : [])
             .navigationTitle(model.hasMediaBarSection ? "" : i18n.t("home:title"))
-            .toolbar(model.hasMediaBarSection ? .hidden : .automatic, for: .navigationBar)
+            .navigationBarTitleDisplayMode(model.hasMediaBarSection ? .inline : .automatic)
+            .scrollEdgeEffectHidden(model.hasMediaBarSection, for: .top)
+            .profileToolbar()
             .refreshable { await model.loadHome() }
             .appDestinations()
         }

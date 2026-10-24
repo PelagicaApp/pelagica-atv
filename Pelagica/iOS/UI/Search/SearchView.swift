@@ -59,6 +59,7 @@ struct SearchView: View {
                 .padding(.vertical)
             }
             .navigationTitle(i18n.t("search"))
+            .profileToolbar()
             .searchable(text: $model.query, prompt: i18n.t("search"))
             .appDestinations()
         }
