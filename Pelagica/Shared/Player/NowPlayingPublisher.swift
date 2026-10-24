@@ -58,7 +58,9 @@ final class NowPlayingPublisher {
         commandTargets = []
         info = [:]
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+        #if !os(iOS)
         MPNowPlayingInfoCenter.default().playbackState = .stopped
+        #endif
     }
 
     func setMetadata(title: String, subtitle: String?, overview: String?) {
@@ -79,7 +81,9 @@ final class NowPlayingPublisher {
         info[MPMediaItemPropertyPlaybackDuration] = duration > 0 ? duration : nil
         info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
         info[MPNowPlayingInfoPropertyDefaultPlaybackRate] = 1.0
+        #if !os(iOS)
         MPNowPlayingInfoCenter.default().playbackState = isPlaying ? .playing : .paused
+        #endif
         publish()
     }
 
