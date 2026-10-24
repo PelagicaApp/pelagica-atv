@@ -13,8 +13,14 @@ struct PlayerControls: View {
 
     @State private var isVisible = true
     @State private var hideTask: Task<Void, Never>?
-    @State private var isShowingTracks = false
+    @State private var presentedTrackMenu: TrackMenu?
     @State private var doubleTapJumps = 0
+
+    private enum TrackMenu {
+        case audio, subtitles
+    }
+
+    private var isShowingTracks: Bool { presentedTrackMenu != nil }
 
     private static let jumpInterval: TimeInterval = 10
     private static let autoHideDelay: Duration = .seconds(4)
@@ -112,30 +118,39 @@ struct PlayerControls: View {
 
             Spacer()
 
-            if session.audioStreams.count > 1 || !session.subtitleStreams.isEmpty {
-                tracksMenu
+            if session.audioStreams.count > 1 {
+                trackMenuButton(.audio, systemImage: "waveform")
+            }
+
+            if !session.subtitleStreams.isEmpty {
+                trackMenuButton(.subtitles, systemImage: "captions.bubble")
             }
         }
     }
 
-    private var tracksMenu: some View {
+    private func trackMenuButton(_ menu: TrackMenu, systemImage: String) -> some View {
         Button {
-            isShowingTracks = true
+            presentedTrackMenu = menu
         } label: {
-            Image(systemName: "captions.bubble")
+            Image(systemName: systemImage)
                 .font(.title3.weight(.semibold))
                 .frame(width: 44, height: 44)
         }
-        .popover(isPresented: $isShowingTracks) {
-            tracksList
+        .popover(isPresented: Binding(
+            get: { presentedTrackMenu == menu },
+            set: { if !$0, presentedTrackMenu == menu { presentedTrackMenu = nil } }
+        )) {
+            trackList(for: menu)
                 .frame(minWidth: 280, idealHeight: 360)
                 .presentationCompactAdaptation(.popover)
         }
     }
 
-    private var tracksList: some View {
-        List {
-            if session.audioStreams.count > 1 {
+    @ViewBuilder
+    private func trackList(for menu: TrackMenu) -> some View {
+        switch menu {
+        case .audio:
+            List {
                 Section(i18n.t("player:audioTracks")) {
                     ForEach(session.audioStreams, id: \.index) { stream in
                         trackRow(audioTitle(for: stream), isSelected: stream.index == session.selectedAudioStreamIndex) {
@@ -144,8 +159,8 @@ struct PlayerControls: View {
                     }
                 }
             }
-
-            if !session.subtitleStreams.isEmpty {
+        case .subtitles:
+            List {
                 Section(i18n.t("subtitles")) {
                     trackRow(i18n.t("player:off"), isSelected: session.selectedSubtitleStreamIndex == nil) {
                         session.selectSubtitleTrack(nil)
@@ -163,7 +178,7 @@ struct PlayerControls: View {
     private func trackRow(_ title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
         Button {
             action()
-            isShowingTracks = false
+            presentedTrackMenu = nil
         } label: {
             HStack {
                 Text(title)
