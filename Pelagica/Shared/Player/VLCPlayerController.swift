@@ -66,6 +66,7 @@ final class VLCPlayerController: NSObject, ObservableObject {
     private var externalSubtitleTrackIDs: [Int: Int32] = [:]
     /// An external subtitle that has been handed to VLC but whose track ID hasn't shown up yet.
     private var awaitingExternalSubtitle: (streamIndex: Int, knownTrackIDs: Set<Int32>)?
+    private var backgroundedVideoTrackID: Int32?
 
     enum SubtitleSelection {
         case unchanged
@@ -79,7 +80,31 @@ final class VLCPlayerController: NSObject, ObservableObject {
         videoView.backgroundColor = .black
         player.drawable = videoView
         player.delegate = self
+        #if os(iOS)
+        let center = NotificationCenter.default
+        center.addObserver(self, selector: #selector(appDidEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
+        center.addObserver(self, selector: #selector(appWillEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
+        #endif
     }
+
+    // MARK: Background playback
+
+    #if os(iOS)
+    @objc private func appDidEnterBackground() {
+        guard player.media != nil, backgroundedVideoTrackID == nil else { return }
+        let trackID = player.currentVideoTrackIndex
+        guard trackID != -1 else { return }
+        backgroundedVideoTrackID = trackID
+        player.currentVideoTrackIndex = -1
+    }
+
+    @objc private func appWillEnterForeground() {
+        guard let trackID = backgroundedVideoTrackID else { return }
+        backgroundedVideoTrackID = nil
+        guard player.media != nil else { return }
+        player.currentVideoTrackIndex = trackID
+    }
+    #endif
 
     // MARK: Loading
 
@@ -101,6 +126,7 @@ final class VLCPlayerController: NSObject, ObservableObject {
         externalSubtitleTrackIDs = [:]
         awaitingExternalSubtitle = nil
         pendingSeek = nil
+        backgroundedVideoTrackID = nil
         clock.scrubSeconds = nil
         durationSeconds = knownDurationSeconds ?? 0
         currentSeconds = startSeconds
@@ -140,6 +166,7 @@ final class VLCPlayerController: NSObject, ObservableObject {
         loadGeneration += 1
         player.stop()
         player.media = nil
+        backgroundedVideoTrackID = nil
         nowPlaying.deactivate()
         UIApplication.shared.isIdleTimerDisabled = false
         Self.deactivateAudioSession()
