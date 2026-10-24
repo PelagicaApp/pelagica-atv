@@ -38,7 +38,7 @@ struct AuthFlowView: View {
 struct AuthHeader: View {
     var body: some View {
         VStack(spacing: 12) {
-            Image("pelagicaLogo")
+            Image("pelagicaLogoThick")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 64, height: 64)

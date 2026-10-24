@@ -60,6 +60,8 @@ struct ServerConnectView: View {
                                 Label {
                                     Text(server.name)
                                     Text(server.url.absoluteString)
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
                                 } icon: {
                                     Image(systemName: "server.rack")
                                 }
