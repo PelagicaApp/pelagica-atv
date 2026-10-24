@@ -156,7 +156,7 @@ struct ItemDetailView: View {
     // MARK: Actions
 
     private var actions: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             Button(action: model.play) {
                 Label(model.playLabel, systemImage: "play.fill")
                     .font(.headline)
