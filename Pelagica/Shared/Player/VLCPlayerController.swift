@@ -272,9 +272,13 @@ final class VLCPlayerController: NSObject, ObservableObject {
 
     /// Moves the scrub position without touching playback; call `commitScrub()` to seek there
     func scrub(by seconds: TimeInterval) {
-        let base = clock.scrubSeconds ?? currentSeconds
+        scrub(to: (clock.scrubSeconds ?? currentSeconds) + seconds)
+    }
+
+    /// Moves the scrub position to an absolute time without touching playback; call `commitScrub()` to seek there
+    func scrub(to seconds: TimeInterval) {
         let upperBound = durationSeconds > 0 ? durationSeconds - 1 : .greatestFiniteMagnitude
-        clock.scrubSeconds = min(max(0, base + seconds), upperBound)
+        clock.scrubSeconds = min(max(0, seconds), upperBound)
     }
 
     func commitScrub() {

@@ -40,7 +40,14 @@ struct PlayerControls: View {
                     Spacer()
                     transportButtons
                     Spacer()
-                    PlayerTimeline(clock: controller.clock, controller: controller, onInteraction: scheduleHide)
+                    PlayerTimeline(
+                        clock: controller.clock,
+                        controller: controller,
+                        trickplay: session.trickplay,
+                        onEditingChanged: { isEditing in
+                            if isEditing { show(autoHide: false) } else { scheduleHide() }
+                        }
+                    )
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
@@ -256,36 +263,111 @@ struct PlayerControls: View {
 private struct PlayerTimeline: View {
     @ObservedObject var clock: PlaybackClock
     let controller: VLCPlayerController
-    let onInteraction: () -> Void
+    let trickplay: TrickplayProvider?
+    let onEditingChanged: (Bool) -> Void
 
-    @State private var dragSeconds: TimeInterval?
+    @State private var dragStartSeconds: TimeInterval?
+    @GestureState private var isDragging = false
+    @State private var trackWidth: CGFloat = 0
+    @State private var previewWidth: CGFloat = 0
+
+    private static let touchHeight: CGFloat = 32
+    private static let previewGap: CGFloat = 8
+    private static let tapTolerance: CGFloat = 4
+    private static let accessibilityStep: TimeInterval = 10
+
+    private var displayedSeconds: TimeInterval { clock.scrubSeconds ?? clock.currentSeconds }
 
     var body: some View {
         VStack(spacing: 6) {
-            Slider(
-                value: Binding(
-                    get: { dragSeconds ?? clock.currentSeconds },
-                    set: { dragSeconds = $0 }
-                ),
-                in: 0...max(clock.durationSeconds, 1),
-                onEditingChanged: { isEditing in
-                    if !isEditing, let dragSeconds {
-                        controller.seek(to: dragSeconds)
-                        self.dragSeconds = nil
-                    }
-                    onInteraction()
-                }
-            )
-            .tint(.white)
+            track
 
             HStack {
-                Text(Self.format(dragSeconds ?? clock.currentSeconds))
+                Text(Self.format(displayedSeconds))
                 Spacer()
-                Text("-" + Self.format(max(clock.durationSeconds - (dragSeconds ?? clock.currentSeconds), 0)))
+                Text("-" + Self.format(max(clock.durationSeconds - displayedSeconds, 0)))
             }
             .font(.caption.monospacedDigit())
             .foregroundStyle(.white.opacity(0.8))
         }
+        .task(id: trickplay.map(ObjectIdentifier.init)) {
+            guard let trickplay else { return }
+            _ = await trickplay.thumbnail(at: trickplay.thumbnailIndex(at: clock.currentSeconds))
+        }
+        .onChange(of: isDragging) { _, isDragging in
+            guard !isDragging, dragStartSeconds != nil else { return }
+            dragStartSeconds = nil
+            controller.cancelScrub()
+            onEditingChanged(false)
+        }
+    }
+
+    private var track: some View {
+        ZStack(alignment: .leading) {
+            Capsule().fill(.white.opacity(0.3))
+            Capsule().fill(.white)
+                .frame(width: trackWidth * fraction(of: displayedSeconds))
+        }
+        .frame(height: controller.isScrubbing ? 8 : 4)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { trackWidth = $0 }
+        .frame(maxWidth: .infinity, minHeight: Self.touchHeight)
+        .contentShape(Rectangle())
+        .overlay(alignment: .bottomLeading) {
+            if let scrubSeconds = clock.scrubSeconds {
+                ScrubPreview(seconds: scrubSeconds, trickplay: trickplay)
+                    .fixedSize()
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { previewWidth = $0 }
+                    .offset(x: previewLeading(for: scrubSeconds), y: -(Self.touchHeight + Self.previewGap))
+                    .allowsHitTesting(false)
+            }
+        }
+        .animation(.easeOut(duration: 0.15), value: controller.isScrubbing)
+        .gesture(scrubGesture)
+        .accessibilityElement()
+        .accessibilityValue(Self.format(displayedSeconds))
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: controller.jump(by: Self.accessibilityStep)
+            case .decrement: controller.jump(by: -Self.accessibilityStep)
+            @unknown default: break
+            }
+        }
+    }
+
+    private var scrubGesture: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .updating($isDragging) { _, state, _ in state = true }
+            .onChanged { value in
+                let start: TimeInterval
+                if let dragStartSeconds {
+                    start = dragStartSeconds
+                } else {
+                    start = clock.currentSeconds
+                    dragStartSeconds = start
+                    onEditingChanged(true)
+                }
+                guard trackWidth > 0 else { return }
+                controller.scrub(to: start + value.translation.width / trackWidth * clock.durationSeconds)
+            }
+            .onEnded { value in
+                dragStartSeconds = nil
+                if abs(value.translation.width) < Self.tapTolerance {
+                    controller.cancelScrub()
+                } else {
+                    controller.commitScrub()
+                }
+                onEditingChanged(false)
+            }
+    }
+
+    private func fraction(of seconds: TimeInterval) -> CGFloat {
+        guard clock.durationSeconds > 0 else { return 0 }
+        return CGFloat(min(max(seconds / clock.durationSeconds, 0), 1))
+    }
+
+    private func previewLeading(for seconds: TimeInterval) -> CGFloat {
+        let center = trackWidth * fraction(of: seconds)
+        return min(max(0, center - previewWidth / 2), max(0, trackWidth - previewWidth))
     }
 
     static func format(_ seconds: TimeInterval) -> String {
@@ -297,6 +379,48 @@ private struct PlayerTimeline: View {
             return String(format: "%d:%02d:%02d", hours, minutes, secs)
         }
         return String(format: "%d:%02d", minutes, secs)
+    }
+}
+
+private struct ScrubPreview: View {
+    let seconds: TimeInterval
+    let trickplay: TrickplayProvider?
+
+    @State private var image: CGImage?
+
+    private static let thumbnailWidth: CGFloat = 180
+
+    var body: some View {
+        VStack(spacing: 6) {
+            if let trickplay {
+                ZStack {
+                    Color.black
+                    if let image {
+                        Image(decorative: image, scale: 1)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    }
+                }
+                .frame(
+                    width: Self.thumbnailWidth,
+                    height: Self.thumbnailWidth * CGFloat(trickplay.thumbnailHeight) / CGFloat(trickplay.thumbnailWidth)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.white.opacity(0.7), lineWidth: 1))
+                .shadow(color: .black.opacity(0.5), radius: 8)
+            }
+
+            Text(PlayerTimeline.format(seconds))
+                .font(.subheadline.weight(.semibold).monospacedDigit())
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(.black.opacity(0.6), in: Capsule())
+        }
+        .task(id: trickplay?.thumbnailIndex(at: seconds)) {
+            guard let trickplay else { return }
+            let loaded = await trickplay.thumbnail(at: trickplay.thumbnailIndex(at: seconds))
+            if !Task.isCancelled, let loaded { image = loaded }
+        }
     }
 }
 
