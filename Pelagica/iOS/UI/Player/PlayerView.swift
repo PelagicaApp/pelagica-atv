@@ -14,6 +14,7 @@ struct PlayerView: View {
     @StateObject private var session: PlaybackSession
     @AppStorage("playerDisplayMode") private var displayMode: PlayerDisplayMode = .fit
     @State private var surfaceSize: CGSize = .zero
+    @State private var isRotating = false
 
     init(item: BaseItemDto, startTicks: Int = 0) {
         _session = StateObject(wrappedValue: PlaybackSession(item: item, startTicks: startTicks))
@@ -27,7 +28,9 @@ struct PlayerView: View {
                 .onGeometryChange(for: CGSize.self, of: \.size) { surfaceSize = $0 }
                 .ignoresSafeArea(edges: displayMode == .safeArea ? .vertical : .all)
 
-            if session.didFailToResolve {
+            if isAwaitingLandscape {
+                loadingIndicator
+            } else if session.didFailToResolve {
                 VStack(spacing: 20) {
                     Text(i18n.t("player:playbackDecodeErrorFailed"))
                         .font(.headline)
@@ -40,11 +43,10 @@ struct PlayerView: View {
             } else if session.isLoaded {
                 PlayerControls(session: session, controller: session.controller, onClose: { dismiss() })
             } else {
-                ProgressView()
-                    .tint(.white)
-                    .controlSize(.large)
+                loadingIndicator
             }
         }
+        .background(PlayerOrientationController(isRotating: $isRotating))
         .simultaneousGesture(displayModeGesture)
         .sensoryFeedback(.selection, trigger: displayMode)
         .onChange(of: displayMode, initial: true) { applyCrop() }
@@ -66,6 +68,16 @@ struct PlayerView: View {
         }
     }
 
+    private var isAwaitingLandscape: Bool {
+        isRotating || (UIDevice.current.userInterfaceIdiom == .phone && surfaceSize.width <= surfaceSize.height)
+    }
+
+    private var loadingIndicator: some View {
+        ProgressView()
+            .tint(.white)
+            .controlSize(.large)
+    }
+
     // MARK: Display mode
 
     private var displayModeGesture: some Gesture {
@@ -85,6 +97,47 @@ struct PlayerView: View {
     }
 }
 
+struct PlayerOrientationController: UIViewControllerRepresentable {
+    @Binding var isRotating: Bool
+
+    func makeUIViewController(context: Context) -> Controller {
+        Controller(isRotating: $isRotating)
+    }
+
+    func updateUIViewController(_ controller: Controller, context: Context) {
+        controller.isRotating = $isRotating
+    }
+
+    final class Controller: UIViewController {
+        var isRotating: Binding<Bool>
+
+        init(isRotating: Binding<Bool>) {
+            self.isRotating = isRotating
+            super.init(nibName: nil, bundle: nil)
+        }
+
+        required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+        override func loadView() {
+            view = UIView()
+            view.isUserInteractionEnabled = false
+        }
+
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            OrientationLock.set(.landscape)
+        }
+
+        override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+            super.viewWillTransition(to: size, with: coordinator)
+            isRotating.wrappedValue = true
+            coordinator.animate(alongsideTransition: nil) { [weak self] _ in
+                self?.isRotating.wrappedValue = false
+            }
+        }
+    }
+}
+
 enum PlayerDisplayMode: String, CaseIterable {
     case safeArea
     case fit
@@ -97,7 +150,7 @@ extension View {
             PlayerView(item: target.item, startTicks: target.startTicks)
         }
         .onChange(of: target.wrappedValue == nil) { _, isNil in
-            OrientationLock.set(isNil ? .portrait : .landscape)
+            if isNil { OrientationLock.set(.portrait) }
         }
     }
 }
