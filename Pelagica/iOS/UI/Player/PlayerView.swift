@@ -12,6 +12,8 @@ struct PlayerView: View {
     @Environment(\.dismiss) private var dismiss
 
     @StateObject private var session: PlaybackSession
+    @AppStorage("playerDisplayMode") private var displayMode: PlayerDisplayMode = .fit
+    @State private var surfaceSize: CGSize = .zero
 
     init(item: BaseItemDto, startTicks: Int = 0) {
         _session = StateObject(wrappedValue: PlaybackSession(item: item, startTicks: startTicks))
@@ -22,7 +24,8 @@ struct PlayerView: View {
             Color.black.ignoresSafeArea()
 
             VLCVideoSurface(view: session.controller.videoView)
-                .ignoresSafeArea()
+                .onGeometryChange(for: CGSize.self, of: \.size) { surfaceSize = $0 }
+                .ignoresSafeArea(edges: displayMode == .safeArea ? .vertical : .all)
 
             if session.didFailToResolve {
                 VStack(spacing: 20) {
@@ -42,6 +45,10 @@ struct PlayerView: View {
                     .controlSize(.large)
             }
         }
+        .simultaneousGesture(displayModeGesture)
+        .sensoryFeedback(.selection, trigger: displayMode)
+        .onChange(of: displayMode, initial: true) { applyCrop() }
+        .onChange(of: surfaceSize) { applyCrop() }
         .preferredColorScheme(.dark)
         .statusBarHidden()
         .persistentSystemOverlays(.hidden)
@@ -58,6 +65,30 @@ struct PlayerView: View {
             await session.loadTrickplay()
         }
     }
+
+    // MARK: Display mode
+
+    private var displayModeGesture: some Gesture {
+        MagnifyGesture()
+            .onEnded { value in
+                let step = value.magnification > 1.15 ? 1 : value.magnification < 0.87 ? -1 : 0
+                let modes = PlayerDisplayMode.allCases
+                guard step != 0, let index = modes.firstIndex(of: displayMode), modes.indices.contains(index + step) else { return }
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    displayMode = modes[index + step]
+                }
+            }
+    }
+
+    private func applyCrop() {
+        session.controller.setCropToFill(displayMode == .fill ? surfaceSize : nil)
+    }
+}
+
+enum PlayerDisplayMode: String, CaseIterable {
+    case safeArea
+    case fit
+    case fill
 }
 
 extension View {

@@ -56,6 +56,7 @@ final class VLCPlayerController: NSObject, ObservableObject {
     private var loadGeneration = 0
     /// Kept here because reading `videoAspectRatio` back from VLCKit leaks the returned C string.
     private(set) var aspectRatioOverride: String?
+    private var cropAspectRatio: String?
 
     static let networkCachingMilliseconds = 1500
 
@@ -159,6 +160,22 @@ final class VLCPlayerController: NSObject, ObservableObject {
         print("Pelagica playback: forcing display aspect ratio \(ratio)")
         // libvlc copies the value
         player.videoAspectRatio = cString
+        free(cString)
+    }
+
+    /// Crops the picture to the shape of `size` so it fills a view of that size. `nil` shows the whole picture.
+    func setCropToFill(_ size: CGSize?) {
+        let ratio = size.flatMap { size -> String? in
+            let width = Int(size.width.rounded()), height = Int(size.height.rounded())
+            return width > 0 && height > 0 ? "\(width):\(height)" : nil
+        }
+        guard ratio != cropAspectRatio else { return }
+        cropAspectRatio = ratio
+        guard let ratio, let cString = strdup(ratio) else {
+            player.videoCropGeometry = nil
+            return
+        }
+        player.videoCropGeometry = cString
         free(cString)
     }
 
