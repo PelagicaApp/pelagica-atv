@@ -20,6 +20,7 @@ struct SubtitleStyleSettings: View {
         Toggle(isOn: binding(\.isBold)) {
             Text(i18n.t("settings:subtitle_bold"))
         }
+        .tint(.green)
         
         Button {
             store.reset()

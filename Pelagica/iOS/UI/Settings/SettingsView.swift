@@ -51,6 +51,7 @@ struct SettingsView: View {
                 
                 Section(i18n.t("settings:category_itempage")) {
                     Toggle(i18n.t("settings:play_theme_songs_label"), isOn: $playThemeSongs)
+                        .tint(.green)
                 }
                 
                 Section {
