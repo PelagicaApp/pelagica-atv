@@ -17,6 +17,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "3D72E93C304D940200733911"
                BuildableName = "Pelagica.app"
+               BlueprintName = "Pelagica"
                ReferencedContainer = "container:Pelagica.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -46,6 +47,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "3D72E93C304D940200733911"
             BuildableName = "Pelagica.app"
+            BlueprintName = "Pelagica"
             ReferencedContainer = "container:Pelagica.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -62,6 +64,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "3D72E93C304D940200733911"
             BuildableName = "Pelagica.app"
+            BlueprintName = "Pelagica"
             ReferencedContainer = "container:Pelagica.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
