@@ -12,6 +12,7 @@ import TVVLCKit
 import MobileVLCKit
 #endif
 import UIKit
+import VideoToolbox
 
 final class PlaybackClock: ObservableObject {
     @Published fileprivate(set) var currentSeconds: TimeInterval = 0
@@ -41,7 +42,8 @@ final class VLCPlayerController: NSObject, ObservableObject {
         set { if clock.durationSeconds != newValue { clock.durationSeconds = newValue } }
     }
 
-    private let player = VLCMediaPlayer()
+    private var player: VLCMediaPlayer
+    private var subtitleStyle: SubtitleStyle = .default
     private let nowPlaying = NowPlayingPublisher()
     private var embeddedAudioStreams: [MediaStream] = []
     private var embeddedSubtitleStreams: [MediaStream] = []
@@ -60,6 +62,17 @@ final class VLCPlayerController: NSObject, ObservableObject {
 
     static let networkCachingMilliseconds = 1500
 
+    private static var libraries: [SubtitleStyle: VLCLibrary] = [:]
+
+    private static func library(for style: SubtitleStyle) -> VLCLibrary {
+        if let library = libraries[style] { return library }
+        let library = VLCLibrary(options: style.vlcOptions + decoderOptions)
+        libraries[style] = library
+        return library
+    }
+
+    private static let decoderOptions: [String] = VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC) ? [] : ["--no-skip-frames", "--no-avcodec-hurry-up"]
+
     private static let seekSettleTolerance: TimeInterval = 1.5
     private static let seekSettleTimeout: TimeInterval = 3
 
@@ -77,6 +90,7 @@ final class VLCPlayerController: NSObject, ObservableObject {
     }
 
     override init() {
+        player = VLCMediaPlayer(library: Self.library(for: .default))
         super.init()
         videoView.backgroundColor = .black
         player.drawable = videoView
@@ -107,6 +121,16 @@ final class VLCPlayerController: NSObject, ObservableObject {
     }
     #endif
 
+    private func applySubtitleStyle(_ style: SubtitleStyle) {
+        guard style != subtitleStyle else { return }
+        subtitleStyle = style
+        player.delegate = nil
+        player.stop()
+        player = VLCMediaPlayer(library: Self.library(for: style))
+        player.drawable = videoView
+        player.delegate = self
+    }
+
     // MARK: Loading
 
     func load(
@@ -116,8 +140,10 @@ final class VLCPlayerController: NSObject, ObservableObject {
         displayAspectRatio: String? = nil,
         mediaStreams: [MediaStream],
         audioStream: MediaStream?,
-        subtitle: SubtitleSelection
+        subtitle: SubtitleSelection,
+        subtitleStyle: SubtitleStyle
     ) {
+        applySubtitleStyle(subtitleStyle)
         embeddedAudioStreams = mediaStreams.filter { $0.type == .audio && $0.isExternal != true }
         embeddedSubtitleStreams = mediaStreams.filter { $0.type == .subtitle && $0.isExternal != true }
         pendingAudioStream = audioStream

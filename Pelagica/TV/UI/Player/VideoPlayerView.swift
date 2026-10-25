@@ -8,6 +8,7 @@ import SwiftUI
 
 struct VideoPlayerView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var subtitleStyleStore: SubtitleStyleStore
     @Environment(\.dismiss) private var dismiss
 
     @StateObject private var session: PlaybackSession
@@ -53,13 +54,13 @@ struct VideoPlayerView: View {
                     .tint(.white)
             }
         }
-        .onAppear { session.bind(appState: appState) }
+        .onAppear { session.bind(appState: appState, subtitleStyleStore: subtitleStyleStore) }
         .onDisappear { session.end() }
         .onChange(of: session.isFinished) { _, isFinished in
             if isFinished { dismiss() }
         }
         .task(id: session.currentItem.id) {
-            session.bind(appState: appState)
+            session.bind(appState: appState, subtitleStyleStore: subtitleStyleStore)
             await session.loadCurrentItem()
         }
         .task(id: session.currentMediaSourceID) {

@@ -65,12 +65,15 @@ struct PlayerControlsOverlay: View {
     @State private var scrubGeneration = 0
     @State private var holdDirection: MoveCommandDirection?
     @State private var showsPlaybackInfo = false
+    @State private var touchScrubActivity: ContinuousClock.Instant?
+    @State private var isTouchScrubbing = false
 
     private static let jumpSeconds: TimeInterval = 10
     private static let autoHideDelay: Duration = .seconds(5)
     /// How long the scrub position rests before it's committed
     private static let scrubCommitDelay: Duration = .seconds(0.8)
     private static let holdTickInterval: Duration = .milliseconds(200)
+    private static let swipeMoveCommandGrace: Duration = .milliseconds(400)
 
     /// Seconds to move per tick while an arrow is held, speeding up the longer it's held.
     private static func holdStep(after held: Duration) -> TimeInterval {
@@ -132,10 +135,12 @@ struct PlayerControlsOverlay: View {
                             Label(activeSkipSegment.kind.title, systemImage: "forward.fill")
                         }
                         .focused($focusedField, equals: .skip)
+                        .disabled(openPanel != nil)
                         .padding(.bottom, 32)
                     }
                 }
                 transportBar
+                    .disabled(openPanel != nil)
             }
             .padding(.horizontal, 80)
             .padding(.vertical, 60)
@@ -176,7 +181,12 @@ struct PlayerControlsOverlay: View {
             scheduleAutoHide()
             if field == nil {
                 Task { @MainActor in
-                    if focusedField == nil { focusedField = .scrubber }
+                    guard focusedField == nil else { return }
+                    if let openPanel {
+                        focusedField = .trackOption(initialRow(for: openPanel))
+                    } else {
+                        focusedField = .scrubber
+                    }
                 }
             }
         }
@@ -188,6 +198,9 @@ struct PlayerControlsOverlay: View {
         }
         .background {
             DirectionalHoldDetector(isEnabled: focusedField == .scrubber) { holdDirection = $0 }
+        }
+        .background {
+            TouchpadScrubDetector(isEnabled: focusedField == .scrubber, onEvent: handleTouchScrub)
         }
         .task(id: holdDirection) {
             guard let holdDirection else { return }
@@ -265,6 +278,7 @@ struct PlayerControlsOverlay: View {
             .buttonStyle(ScrubberButtonStyle())
             .focused($focusedField, equals: .scrubber)
             .onMoveCommand { direction in
+                guard !isSwipeMoveCommand else { return }
                 switch direction {
                 case .left:
                     controller.scrub(by: -Self.jumpSeconds)
@@ -281,6 +295,26 @@ struct PlayerControlsOverlay: View {
                 trackMenus
                     .transition(.opacity)
             }
+        }
+    }
+
+    private var isSwipeMoveCommand: Bool {
+        if isTouchScrubbing { return true }
+        guard let touchScrubActivity else { return false }
+        return .now - touchScrubActivity < Self.swipeMoveCommandGrace
+    }
+
+    private func handleTouchScrub(_ event: TouchpadScrubDetector.Event) {
+        touchScrubActivity = .now
+        switch event {
+        case .began:
+            isTouchScrubbing = true
+        case .scrub(let seconds):
+            controller.scrub(by: seconds)
+            scrubGeneration += 1
+            showControls()
+        case .ended:
+            isTouchScrubbing = false
         }
     }
 
@@ -351,6 +385,7 @@ struct PlayerControlsOverlay: View {
         .frame(maxHeight: 560)
         .fixedSize(horizontal: false, vertical: true)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24))
+        .clipped()
         .focusSection()
     }
 
@@ -377,18 +412,24 @@ struct PlayerControlsOverlay: View {
             return
         }
         openPanel = panel
-        let selected = selectedIndex(for: panel)
-        let hasSelectedRow = trackOptions(for: panel).contains { $0.streamIndex == selected }
-        let firstRow = trackOptions(for: panel).first?.streamIndex
+        let row = initialRow(for: panel)
         // Defer until the panel's rows exist, otherwise the focus request is dropped.
         Task { @MainActor in
-            focusedField = .trackOption(hasSelectedRow ? selected : firstRow)
+            focusedField = .trackOption(row)
         }
+    }
+
+    private func initialRow(for panel: TrackPanel) -> Int? {
+        let options = trackOptions(for: panel)
+        let selected = selectedIndex(for: panel)
+        return options.contains { $0.streamIndex == selected } ? selected : options.first?.streamIndex
     }
 
     private func closePanel(_ panel: TrackPanel) {
         openPanel = nil
-        focusedField = panel == .audio ? .audio : .subtitles
+        Task { @MainActor in
+            focusedField = panel == .audio ? .audio : .subtitles
+        }
     }
 
     private func select(_ option: TrackOption, in panel: TrackPanel) {

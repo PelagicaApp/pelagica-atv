@@ -9,6 +9,7 @@ import SwiftUI
 
 struct PlayerView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var subtitleStyleStore: SubtitleStyleStore
     @Environment(\.dismiss) private var dismiss
 
     @StateObject private var session: PlaybackSession
@@ -64,13 +65,13 @@ struct PlayerView: View {
         .preferredColorScheme(.dark)
         .statusBarHidden()
         .persistentSystemOverlays(.hidden)
-        .onAppear { session.bind(appState: appState) }
+        .onAppear { session.bind(appState: appState, subtitleStyleStore: subtitleStyleStore) }
         .onDisappear { session.end() }
         .onChange(of: session.isFinished) { _, isFinished in
             if isFinished { dismiss() }
         }
         .task(id: session.currentItem.id) {
-            session.bind(appState: appState)
+            session.bind(appState: appState, subtitleStyleStore: subtitleStyleStore)
             await session.loadCurrentItem()
         }
         .task(id: session.currentMediaSourceID) {

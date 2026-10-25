@@ -39,6 +39,7 @@ final class PlaybackSession: ObservableObject {
     private var currentMediaSource: MediaSourceInfo?
 
     private var appState: AppState?
+    private var subtitleStyleStore: SubtitleStyleStore?
 
     init(item: BaseItemDto, startTicks: Int = 0) {
         currentItem = item
@@ -46,8 +47,9 @@ final class PlaybackSession: ObservableObject {
         self.startTicks = startTicks
     }
 
-    func bind(appState: AppState) {
+    func bind(appState: AppState, subtitleStyleStore: SubtitleStyleStore) {
         self.appState = appState
+        self.subtitleStyleStore = subtitleStyleStore
         controller.onProgress = { [weak self] in self?.reportProgress(seconds: $0, isPaused: $1) }
         controller.onPlaybackEnded = { [weak self] in self?.handlePlaybackEnded() }
         controller.onPlaybackFailed = { [weak self] in self?.handlePlaybackFailed() }
@@ -412,7 +414,8 @@ final class PlaybackSession: ObservableObject {
                 displayAspectRatio: displayAspectRatio(for: mediaStreams),
                 mediaStreams: method == .transcode ? [] : mediaStreams,
                 audioStream: method == .transcode ? nil : audioStreams.first { $0.index == selectedAudioStreamIndex },
-                subtitle: subtitleSelection(for: selectedSubtitle)
+                subtitle: subtitleSelection(for: selectedSubtitle),
+                subtitleStyle: subtitleStyleStore?.style ?? .default
             )
             controller.setNowPlayingMetadata(title: title, subtitle: subtitle, overview: currentItem.overview)
             isLoaded = true
