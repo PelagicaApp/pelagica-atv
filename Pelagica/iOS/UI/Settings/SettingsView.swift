@@ -18,9 +18,9 @@ struct SettingsView: View {
             Form {
                 Section(i18n.t("settings:account_section_title")) {
                     accountRow
-
+                    
                 }
-
+                
                 if seerrStore.isConfigured {
                     Section {
                         LabeledContent(seerrStatusText) {
@@ -39,7 +39,7 @@ struct SettingsView: View {
                         if let seerrURL = seerrStore.seerrURL { Text(seerrURL) }
                     }
                 }
-
+                
                 Section(i18n.t("settings:language_section_title")) {
                     Picker(i18n.t("sidebar:select_language"), selection: languageSelection) {
                         Text("🌐 \(i18n.t("sidebar:system"))").tag(String?.none)
@@ -48,9 +48,17 @@ struct SettingsView: View {
                         }
                     }
                 }
-
+                
                 Section(i18n.t("settings:category_itempage")) {
                     Toggle(i18n.t("settings:play_theme_songs_label"), isOn: $playThemeSongs)
+                }
+                
+                Section {
+                    SubtitleStyleSettings()
+                } header: {
+                    Text(i18n.t("subtitles"))
+                } footer: {
+                    Text(i18n.t("settings:subtitle_style_description"))
                 }
 
                 Section(i18n.t("settings:about_section_title")) {
