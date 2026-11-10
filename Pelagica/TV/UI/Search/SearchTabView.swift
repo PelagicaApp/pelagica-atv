@@ -41,7 +41,8 @@ struct SearchTabView: View {
                                 .focusSection()
                         } else {
                             if !model.results.isEmpty {
-                                LazyVGrid(columns: columns, spacing: 60) {
+                                // a lazy grid here would keep the Seerr section below unrendered while off screen
+                                AdaptiveGridLayout(minimumItemWidth: 280) {
                                     ForEach(model.results.indices, id: \.self) { index in
                                         ItemCard(item: model.results[index])
                                             .prefersDefaultFocus(index == 0, in: namespace)
@@ -75,7 +76,7 @@ struct SearchTabView: View {
                 .font(.system(size: 36, weight: .semibold))
                 .foregroundStyle(.white)
 
-            LazyVGrid(columns: columns, spacing: 60) {
+            AdaptiveGridLayout(minimumItemWidth: 280) {
                 ForEach(model.seerrResults) { item in
                     SeerrItemCard(item: item)
                 }
