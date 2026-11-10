@@ -15,35 +15,35 @@ struct HomeGenreCard: View {
 
     var body: some View {
         NavigationLink(value: GenreRoute(id: genre.id, name: genre.name)) {
-            ZStack(alignment: .bottomLeading) {
-                Color.white.opacity(0.06)
-
-                if let imageURL {
-                    AsyncImage(url: imageURL) { phase in
-                        if let image = phase.image {
-                            image.resizable().scaledToFill().grayscale(1)
+            Color.white.opacity(0.06)
+                .aspectRatio(aspectRatio, contentMode: .fit)
+                .overlay {
+                    if let imageURL {
+                        AsyncImage(url: imageURL) { phase in
+                            if let image = phase.image {
+                                image.resizable().scaledToFill().grayscale(1)
+                            }
                         }
                     }
                 }
-
-                LinearGradient(
-                    colors: [.black.opacity(0.8), .black.opacity(0.4), .clear],
-                    startPoint: .bottom,
-                    endPoint: .top
-                )
-
-                genre.tint.opacity(0.35)
-
-                Text(genre.name)
-                    .font(.system(size: 30, weight: .semibold))
-                    .foregroundStyle(Color(white: 0.8))
-                    .shadow(radius: 2)
-                    .lineLimit(2)
-                    .padding(16)
-            }
-            .aspectRatio(aspectRatio, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-            .contentShape(RoundedRectangle(cornerRadius: cornerRadius))
+                .overlay {
+                    LinearGradient(
+                        colors: [.black.opacity(0.8), .black.opacity(0.4), .clear],
+                        startPoint: .bottom,
+                        endPoint: .top
+                    )
+                }
+                .overlay { genre.tint.opacity(0.35) }
+                .overlay(alignment: .bottomLeading) {
+                    Text(genre.name)
+                        .font(.system(size: 30, weight: .semibold))
+                        .foregroundStyle(Color(white: 0.8))
+                        .shadow(radius: 2)
+                        .lineLimit(2)
+                        .padding(16)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                .contentShape(RoundedRectangle(cornerRadius: cornerRadius))
         }
         .buttonStyle(.card)
     }
