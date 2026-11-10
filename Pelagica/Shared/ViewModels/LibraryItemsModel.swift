@@ -11,7 +11,7 @@ import JellyfinAPI
 @MainActor
 final class LibraryItemsModel: ObservableObject {
     enum Query {
-        case library(id: String?)
+        case library(id: String?, collectionType: CollectionType?)
         case genre(id: String)
         case studio(id: String)
     }
@@ -100,10 +100,19 @@ final class LibraryItemsModel: ObservableObject {
             parameters.filters = [itemFilter]
         }
         switch query {
-        case .library(let id):
+        case .library(let id, let collectionType):
             guard let id else { return }
-            parameters.isRecursive = false
             parameters.parentID = id
+            switch collectionType {
+            case .movies:
+                parameters.isRecursive = true
+                parameters.includeItemTypes = [.movie]
+            case .tvshows:
+                parameters.isRecursive = true
+                parameters.includeItemTypes = [.series]
+            default:
+                parameters.isRecursive = false
+            }
         case .genre(let id):
             parameters.isRecursive = true
             parameters.includeItemTypes = [.movie, .series]
@@ -155,7 +164,7 @@ final class LibraryItemsModel: ObservableObject {
             parameters.filters = [filter]
             parameters.enableUserData = false
             parameters.enableImages = false
-            if case .library(let id) = query {
+            if case .library(let id, _) = query {
                 parameters.parentID = id
             }
             return try await client.send(Paths.getItems(parameters: parameters)).value.items ?? []

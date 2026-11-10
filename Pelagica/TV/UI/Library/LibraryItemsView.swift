@@ -18,7 +18,7 @@ struct LibraryItemsView: View {
     init(library: BaseItemDto) {
         title = library.name ?? i18n.t("item:unknown_library")
         emptyMessage = i18n.t("library:no_items_description")
-        _model = StateObject(wrappedValue: LibraryItemsModel(query: .library(id: library.id)))
+        _model = StateObject(wrappedValue: LibraryItemsModel(query: .library(id: library.id, collectionType: library.collectionType)))
         isFilterable = library.collectionType == .movies || library.collectionType == .tvshows
     }
 
