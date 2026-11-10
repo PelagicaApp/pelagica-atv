@@ -64,25 +64,24 @@ private struct LibraryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             NavigationLink(value: library) {
-                ZStack {
-                    Color.white.opacity(0.06)
-
-                    AsyncImage(url: imageURL) { phase in
-                        ZStack {
-                            SkeletonView()
-                                .opacity(phase.image == nil && !isFailure(phase) ? 1 : 0)
-                            fallbackIcon
-                                .opacity(isFailure(phase) ? 1 : 0)
-                            if let image = phase.image {
-                                image.resizable().scaledToFill()
+                Color.white.opacity(0.06)
+                    .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                    .overlay {
+                        AsyncImage(url: imageURL) { phase in
+                            ZStack {
+                                SkeletonView()
+                                    .opacity(phase.image == nil && !isFailure(phase) ? 1 : 0)
+                                fallbackIcon
+                                    .opacity(isFailure(phase) ? 1 : 0)
+                                if let image = phase.image {
+                                    image.resizable().scaledToFill()
+                                }
                             }
                         }
+                        .animation(nil, value: imageURL)
                     }
-                    .animation(nil, value: imageURL)
-                }
-                .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-                .contentShape(RoundedRectangle(cornerRadius: cornerRadius))
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                    .contentShape(RoundedRectangle(cornerRadius: cornerRadius))
             }
             .buttonStyle(.card)
             
