@@ -37,6 +37,7 @@ final class SearchModel: ObservableObject {
 
         results = []
         seerrResults = []
+        errorMessage = nil
         isLoading = true
         async let seerrSearch: Void = searchSeerr()
         await searchJellyfin()
@@ -65,9 +66,11 @@ final class SearchModel: ObservableObject {
                 includeItemTypes: [.movie, .series],
                 enableUserData: true,
             ))).value
+            guard !Task.isCancelled else { return }
             results = result.items ?? []
-        } catch is CancellationError {
         } catch {
+            guard !Task.isCancelled else { return }
+            if let urlError = error as? URLError, urlError.code == .cancelled { return }
             errorMessage = i18n.t("search:error_occurred_while_searching")
         }
     }
