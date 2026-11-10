@@ -93,16 +93,14 @@ final class TabNavigationCoordinator: ObservableObject {
         #endif
     }
 
-    /// Opens the route on top of the current tab's root, falling back to Home.
+    /// Opens the route on top of the Library tab's root when it's selected, otherwise on Home.
+    /// Search is skipped since its active search field blocks programmatic pushes.
     private func push<Route: Hashable>(_ route: Route) {
         var path = NavigationPath()
         path.append(route)
-        switch selectedTab {
-        case .library:
+        if selectedTab == .library {
             libraryPath = path
-        case .search:
-            searchPath = path
-        case .home, .settings:
+        } else {
             selectedTab = .home
             homePath = path
         }

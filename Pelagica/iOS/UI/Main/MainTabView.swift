@@ -51,13 +51,15 @@ struct MainTabView: View {
                 .onChange(of: appState.pendingDeepLink, initial: true) { _, link in
                     guard let link else { return }
                     appState.pendingDeepLink = nil
+                    let hadSheet = isShowingQuickConnect || navigationCoordinator.isShowingSettings
                     isShowingQuickConnect = false
                     Task {
                         await navigationCoordinator.open(link, appState: appState)
-                        if let target = navigationCoordinator.playbackTarget {
-                            navigationCoordinator.playbackTarget = nil
-                            playerPresenter.target = target
-                        }
+                        guard let target = navigationCoordinator.playbackTarget else { return }
+                        navigationCoordinator.playbackTarget = nil
+                        // Presenting the player while a sheet is still dismissing breaks playback
+                        if hadSheet { try? await Task.sleep(for: .milliseconds(600)) }
+                        playerPresenter.target = target
                     }
                 }
             }

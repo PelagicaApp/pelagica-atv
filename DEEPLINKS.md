@@ -24,3 +24,5 @@ IDs are Jellyfin item IDs, as shown in the Jellyfin web URL (`…/details?id={it
 ```bash
 xcrun simctl openurl booted "pelagica://search?q=matrix"
 ```
+
+If both an iPhone and an Apple TV simulator are running, `booted` picks just one of them. Pass the device's UDID (from `xcrun simctl list devices booted`) instead.
