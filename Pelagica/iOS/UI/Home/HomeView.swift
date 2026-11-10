@@ -8,6 +8,7 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var navigationCoordinator: TabNavigationCoordinator
     @EnvironmentObject private var configStore: AppConfigStore
     @EnvironmentObject private var seerrStore: SeerrStore
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -15,7 +16,7 @@ struct HomeView: View {
     @StateObject private var model = HomeModel()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationCoordinator.homePath) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 28) {
                     if model.hasMediaBarSection {

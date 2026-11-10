@@ -8,14 +8,14 @@ import SwiftUI
 
 struct HomeTabView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var navigationCoordinator: TabNavigationCoordinator
     @EnvironmentObject private var configStore: AppConfigStore
     @EnvironmentObject private var seerrStore: SeerrStore
 
     @StateObject private var model = HomeModel()
-    @State private var path = NavigationPath()
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack(path: $navigationCoordinator.homePath) {
             GeometryReader { proxy in
                 ZStack {
                     PelagicaBackground()
@@ -84,7 +84,7 @@ struct HomeTabView: View {
                 StudiosView()
             }
         }
-        .onDisappear { path = NavigationPath() }
+        .onDisappear { navigationCoordinator.homePath = NavigationPath() }
         // Reloads when Seerr is logged in or out from Settings, so its rows appear or disappear
         .task(id: seerrStore.isLoggedIn) {
             model.bind(appState: appState, configStore: configStore, seerrStore: seerrStore)

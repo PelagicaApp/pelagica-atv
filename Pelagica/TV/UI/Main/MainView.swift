@@ -38,6 +38,15 @@ struct MainView: View {
                         .tag(MainTab.settings)
                 }
                 .id(languageOverride)
+                .fullScreenCover(item: $navigationCoordinator.playbackTarget) { target in
+                    VideoPlayerView(item: target.item, startTicks: target.startTicks)
+                        .ignoresSafeArea()
+                }
+                .onChange(of: appState.pendingDeepLink, initial: true) { _, link in
+                    guard let link else { return }
+                    appState.pendingDeepLink = nil
+                    Task { await navigationCoordinator.open(link, appState: appState) }
+                }
             }
         }
         .background(PelagicaBackground())

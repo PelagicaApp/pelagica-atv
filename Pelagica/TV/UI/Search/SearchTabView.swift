@@ -7,18 +7,18 @@ import SwiftUI
 
 struct SearchTabView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var navigationCoordinator: TabNavigationCoordinator
     @EnvironmentObject private var seerrStore: SeerrStore
     
     @Namespace private var namespace
     @FocusState private var isGridFocused: Bool
     
     @StateObject private var model = SearchModel()
-    @State private var path = NavigationPath()
 
     private let columns = [GridItem(.adaptive(minimum: 280), spacing: 40)]
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack(path: $navigationCoordinator.searchPath) {
             ZStack {
                 PelagicaBackground()
 
@@ -63,7 +63,12 @@ struct SearchTabView: View {
             .pelagicaDestinations()
             .searchable(text: $model.query, prompt: i18n.t("search"))
         }
-        .onDisappear { path = NavigationPath() }
+        .onDisappear { navigationCoordinator.searchPath = NavigationPath() }
+        .onChange(of: navigationCoordinator.pendingSearchQuery, initial: true) { _, query in
+            guard let query else { return }
+            model.query = query
+            navigationCoordinator.pendingSearchQuery = nil
+        }
         .task(id: model.query) {
             model.bind(appState: appState, seerrStore: seerrStore)
             await model.search()

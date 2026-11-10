@@ -24,6 +24,9 @@ struct RootView: View {
         .preferredColorScheme(.dark)
         .tint(.white)
         .task { await appState.restoreSession() }
+        .onOpenURL { url in
+            appState.pendingDeepLink = DeepLink(url: url)
+        }
     }
 }
 

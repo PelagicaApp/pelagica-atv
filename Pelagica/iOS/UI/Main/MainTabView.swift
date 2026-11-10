@@ -12,7 +12,7 @@ struct MainTabView: View {
     @StateObject private var seerrStore = SeerrStore()
     @StateObject private var subtitleStyleStore = SubtitleStyleStore()
     @StateObject private var playerPresenter = PlayerPresenter()
-    @State private var isShowingSettings = false
+    @StateObject private var navigationCoordinator = TabNavigationCoordinator()
     @State private var isShowingQuickConnect = false
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(Translations.languageDefaultsKey) private var languageOverride: String?
@@ -22,21 +22,21 @@ struct MainTabView: View {
             if configStore.isLoading || !seerrStore.isReady {
                 ProgressView()
             } else {
-                TabView {
-                    Tab(i18n.t("home:title"), systemImage: "house.fill") {
+                TabView(selection: $navigationCoordinator.selectedTab) {
+                    Tab(i18n.t("home:title"), systemImage: "house.fill", value: MainTab.home) {
                         HomeView()
                     }
-                    Tab(i18n.t("library:title"), systemImage: "books.vertical.fill") {
+                    Tab(i18n.t("library:title"), systemImage: "books.vertical.fill", value: MainTab.library) {
                         LibrariesView()
                     }
-                    Tab(i18n.t("search"), systemImage: "magnifyingglass", role: .search) {
+                    Tab(i18n.t("search"), systemImage: "magnifyingglass", value: MainTab.search, role: .search) {
                         SearchView()
                     }
                 }
                 .id(languageOverride)
-                .environment(\.showSettings, ShowSettingsAction { isShowingSettings = true })
+                .environment(\.showSettings, ShowSettingsAction { navigationCoordinator.isShowingSettings = true })
                 .environment(\.showQuickConnect, ShowSettingsAction { isShowingQuickConnect = true })
-                .sheet(isPresented: $isShowingSettings) {
+                .sheet(isPresented: $navigationCoordinator.isShowingSettings) {
                     SettingsView()
                         .presentationDetents([.large])
                         .presentationDragIndicator(.visible)
@@ -48,11 +48,24 @@ struct MainTabView: View {
                     .presentationDragIndicator(.visible)
                 }
                 .playerCover($playerPresenter.target)
+                .onChange(of: appState.pendingDeepLink, initial: true) { _, link in
+                    guard let link else { return }
+                    appState.pendingDeepLink = nil
+                    isShowingQuickConnect = false
+                    Task {
+                        await navigationCoordinator.open(link, appState: appState)
+                        if let target = navigationCoordinator.playbackTarget {
+                            navigationCoordinator.playbackTarget = nil
+                            playerPresenter.target = target
+                        }
+                    }
+                }
             }
         }
         .environmentObject(configStore)
         .environmentObject(seerrStore)
         .environmentObject(playerPresenter)
+        .environmentObject(navigationCoordinator)
         .environmentObject(subtitleStyleStore)
         .task { await reload() }
         .onChange(of: scenePhase) { _, newPhase in

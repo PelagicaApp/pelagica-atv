@@ -23,6 +23,9 @@ struct ContentView: View {
         .environmentObject(appState)
         .preferredColorScheme(.dark)
         .task { await appState.restoreSession() }
+        .onOpenURL { url in
+            appState.pendingDeepLink = DeepLink(url: url)
+        }
     }
 }
 

@@ -12,12 +12,11 @@ struct LibraryView: View {
     @EnvironmentObject private var navigationCoordinator: TabNavigationCoordinator
 
     @StateObject private var model = LibrariesModel()
-    @State private var path = NavigationPath()
 
     private let columns = [GridItem(.adaptive(minimum: 380), spacing: 60)]
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack(path: $navigationCoordinator.libraryPath) {
             ZStack {
                 PelagicaBackground()
 
@@ -46,11 +45,11 @@ struct LibraryView: View {
             }
             .pelagicaDestinations()
         }
-        .onDisappear { path = NavigationPath() }
+        .onDisappear { navigationCoordinator.libraryPath = NavigationPath() }
         .task { await model.load(appState: appState) }
         .onChange(of: navigationCoordinator.pendingLibrary) { _, pendingLibrary in
             guard let pendingLibrary else { return }
-            path.append(pendingLibrary)
+            navigationCoordinator.libraryPath.append(pendingLibrary)
             navigationCoordinator.pendingLibrary = nil
         }
     }

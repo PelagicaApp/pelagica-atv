@@ -8,6 +8,7 @@ import SwiftUI
 
 struct SearchView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var navigationCoordinator: TabNavigationCoordinator
     @EnvironmentObject private var seerrStore: SeerrStore
 
     @StateObject private var model = SearchModel()
@@ -17,7 +18,7 @@ struct SearchView: View {
     private var columns: [GridItem] { CardMetrics.gridColumns(minimum: 104, spacing: 12, sizeClass) }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationCoordinator.searchPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     if let errorMessage = model.errorMessage {
@@ -62,6 +63,11 @@ struct SearchView: View {
             .profileToolbar()
             .searchable(text: $model.query, prompt: i18n.t("search"))
             .appDestinations()
+        }
+        .onChange(of: navigationCoordinator.pendingSearchQuery, initial: true) { _, query in
+            guard let query else { return }
+            model.query = query
+            navigationCoordinator.pendingSearchQuery = nil
         }
         .task(id: model.query) {
             model.bind(appState: appState, seerrStore: seerrStore)

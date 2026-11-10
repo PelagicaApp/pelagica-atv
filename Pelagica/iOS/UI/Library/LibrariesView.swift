@@ -8,6 +8,7 @@ import SwiftUI
 
 struct LibrariesView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var navigationCoordinator: TabNavigationCoordinator
     @StateObject private var model = LibrariesModel()
 
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -15,7 +16,7 @@ struct LibrariesView: View {
     private var columns: [GridItem] { CardMetrics.gridColumns(minimum: 160, spacing: 16, sizeClass) }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationCoordinator.libraryPath) {
             ScrollView {
                 if let errorMessage = model.errorMessage {
                     ContentUnavailableView(errorMessage, systemImage: "exclamationmark.triangle")

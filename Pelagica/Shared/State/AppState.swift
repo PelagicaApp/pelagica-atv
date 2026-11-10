@@ -52,6 +52,7 @@ final class AppState: ObservableObject {
     @Published private(set) var isAddingProfile = false
     @Published private(set) var reauthServer: DiscoveredServer?
     @Published private(set) var watchStateVersion = 0
+    @Published var pendingDeepLink: DeepLink?
 
     /// Logs in to Seerr after a password sign-in
     private(set) var pendingSeerrLogin: Task<Void, Never>?
