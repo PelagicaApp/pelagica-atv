@@ -1,10 +1,12 @@
-# Pelagica for Apple TV
+# Pelagica for Apple Devices
 
-This is the Apple TV app for [Pelagica](https://github.com/PelagicaApp/pelagica), a client for [Jellyfin](https://jellyfin.org).
+This is the Apple TV, iOS and iPadOS app for [Pelagica](https://github.com/PelagicaApp/pelagica), a client for [Jellyfin](https://jellyfin.org).
 
 ![Home](./.github/assets/pelagica-appletv-home.png)
 
-### Screenshots
+## Screenshots
+
+## tvOS
 
 <table>
   <tr>
@@ -25,6 +27,25 @@ This is the Apple TV app for [Pelagica](https://github.com/PelagicaApp/pelagica)
   </tr>
 </table>
 
+## iOS
+
+<table>
+  <tr>
+    <td>
+      <img src="./.github/assets/pelagica-ios-home.png" />
+    </td>
+    <td>
+      <img src="./.github/assets/pelagica-ios-series.png" />
+    </td>
+    <td>
+      <img src="./.github/assets/pelagica-ios-library.png" />
+    </td>
+    <td>
+      <img src="./.github/assets/pelagica-ios-search.png" />
+    </td>
+  </tr>
+</table>
+
 > Screenshots may include media artwork used for demonstration purposes only.
 
 ## Installation
@@ -33,9 +54,12 @@ This is the Apple TV app for [Pelagica](https://github.com/PelagicaApp/pelagica)
 
 You can download the app on the [App Store](https://apps.apple.com/app/pelagica/id6811079730).
 
+> [!NOTE]  
+> The iOS and iPadOS versions of Pelagica are currently only available via TestFlight. The App Store version is only available for Apple TV.
+
 ### TestFlight
 
-You can join the [TestFlight beta](https://testflight.apple.com/join/CUsEZtDK) to try out beta builds of Pelagica for Apple TV. TestFlight builds may be unstable and are not guaranteed to work.
+You can join the [TestFlight beta](https://testflight.apple.com/join/CUsEZtDK) to try out beta builds of Pelagica for Apple TV, iOS and iPadOS. TestFlight builds may be unstable and are not guaranteed to work.
 
 ### Building it yourself
 
