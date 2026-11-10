@@ -28,6 +28,7 @@ final class PlaybackSession: ObservableObject {
     @Published private(set) var outroRange: ClosedRange<TimeInterval>?
     @Published private(set) var trickplay: TrickplayProvider?
     @Published private(set) var currentMediaSourceID: String?
+    @Published private(set) var versions: [MediaSourceInfo] = []
 
     private let initialItemID: String?
     private let startTicks: Int
@@ -69,6 +70,7 @@ final class PlaybackSession: ObservableObject {
         outroRange = nil
         selectedSubtitleStreamIndex = nil
         burnedInSubtitleStreamIndex = nil
+        versions = []
         controller.setNowPlayingArtwork(nil)
         let ticks = currentItem.id == initialItemID ? startTicks : 0
         async let playback: Void = resolvePlayback(atTicks: ticks, applyServerDefaults: true)
@@ -174,6 +176,15 @@ final class PlaybackSession: ObservableObject {
     }
 
     // MARK: - Track selection
+
+    func selectVersion(_ source: MediaSourceInfo) {
+        guard let id = source.id, id != currentMediaSourceID else { return }
+        let ticks = Int(controller.currentSeconds * 10_000_000)
+        didFallBackToTranscode = false
+        selectedSubtitleStreamIndex = nil
+        burnedInSubtitleStreamIndex = nil
+        Task { await resolvePlayback(atTicks: ticks, mediaSourceID: id, applyServerDefaults: true) }
+    }
 
     func selectAudioTrack(_ stream: MediaStream) {
         guard let index = stream.index, index != selectedAudioStreamIndex else { return }
@@ -324,6 +335,9 @@ final class PlaybackSession: ObservableObject {
                     userID: userID
                 )
             )).value
+            if mediaSourceID == nil, let sources = info.mediaSources {
+                versions = sources.count > 1 ? sources : []
+            }
             guard let mediaSource = info.mediaSources?.first, let mediaSourceID = mediaSource.id else {
                 print("Pelagica playback: no media source in PlaybackInfo response for item \(itemID)")
                 didFailToResolve = true

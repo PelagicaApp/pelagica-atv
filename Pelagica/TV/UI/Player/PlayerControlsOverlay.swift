@@ -24,6 +24,8 @@ struct PlayerControlsOverlay: View {
     let title: String
     let subtitle: String?
     let overview: String?
+    let versions: [MediaSourceInfo]
+    let selectedVersionID: String?
     let audioStreams: [MediaStream]
     let selectedAudioIndex: Int?
     let subtitleStreams: [MediaStream]
@@ -32,12 +34,14 @@ struct PlayerControlsOverlay: View {
     let outroRange: ClosedRange<TimeInterval>?
     let trickplay: TrickplayProvider?
     let playbackInfo: PlaybackInfoDetails?
+    let onSelectVersion: (MediaSourceInfo) -> Void
     let onSelectAudio: (MediaStream) -> Void
     let onSelectSubtitle: (MediaStream?) -> Void
     let onClose: () -> Void
 
     private enum Field: Hashable {
         case scrubber
+        case versions
         case audio
         case subtitles
         case playbackInfo
@@ -47,6 +51,7 @@ struct PlayerControlsOverlay: View {
     }
 
     private enum TrackPanel {
+        case versions
         case audio
         case subtitles
     }
@@ -320,6 +325,15 @@ struct PlayerControlsOverlay: View {
 
     private var trackMenus: some View {
         HStack(spacing: 24) {
+            if !versions.isEmpty {
+                Button {
+                    togglePanel(.versions)
+                } label: {
+                    Label(i18n.t("player:versions"), systemImage: "film.stack")
+                }
+                .focused($focusedField, equals: .versions)
+            }
+
             if audioStreams.count > 1 {
                 Button {
                     togglePanel(.audio)
@@ -391,6 +405,8 @@ struct PlayerControlsOverlay: View {
 
     private func trackOptions(for panel: TrackPanel) -> [TrackOption] {
         switch panel {
+        case .versions:
+            return versions.indices.map { TrackOption(streamIndex: $0, title: versions[$0].versionTitle) }
         case .audio:
             return audioStreams.map { TrackOption(streamIndex: $0.index, title: audioTitle(for: $0)) }
         case .subtitles:
@@ -401,6 +417,7 @@ struct PlayerControlsOverlay: View {
 
     private func selectedIndex(for panel: TrackPanel) -> Int? {
         switch panel {
+        case .versions: return versions.firstIndex { $0.id == selectedVersionID }
         case .audio: return selectedAudioIndex
         case .subtitles: return selectedSubtitleIndex
         }
@@ -428,12 +445,20 @@ struct PlayerControlsOverlay: View {
     private func closePanel(_ panel: TrackPanel) {
         openPanel = nil
         Task { @MainActor in
-            focusedField = panel == .audio ? .audio : .subtitles
+            switch panel {
+            case .versions: focusedField = .versions
+            case .audio: focusedField = .audio
+            case .subtitles: focusedField = .subtitles
+            }
         }
     }
 
     private func select(_ option: TrackOption, in panel: TrackPanel) {
         switch panel {
+        case .versions:
+            if let index = option.streamIndex, versions.indices.contains(index) {
+                onSelectVersion(versions[index])
+            }
         case .audio:
             if let stream = audioStreams.first(where: { $0.index == option.streamIndex }) {
                 onSelectAudio(stream)
@@ -442,6 +467,10 @@ struct PlayerControlsOverlay: View {
             onSelectSubtitle(subtitleStreams.first { $0.index == option.streamIndex })
         }
         closePanel(panel)
+    }
+
+    private var selectedVersion: MediaSourceInfo? {
+        versions.first { $0.id == selectedVersionID }
     }
 
     private func audioTitle(for stream: MediaStream) -> String {

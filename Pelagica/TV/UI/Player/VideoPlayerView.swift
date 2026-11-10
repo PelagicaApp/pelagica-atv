@@ -37,6 +37,8 @@ struct VideoPlayerView: View {
                     title: session.title,
                     subtitle: session.subtitle,
                     overview: session.currentItem.overview,
+                    versions: session.versions,
+                    selectedVersionID: session.currentMediaSourceID,
                     audioStreams: session.audioStreams,
                     selectedAudioIndex: session.selectedAudioStreamIndex,
                     subtitleStreams: session.subtitleStreams,
@@ -45,6 +47,7 @@ struct VideoPlayerView: View {
                     outroRange: session.outroRange,
                     trickplay: session.trickplay,
                     playbackInfo: session.playbackInfo,
+                    onSelectVersion: session.selectVersion,
                     onSelectAudio: session.selectAudioTrack,
                     onSelectSubtitle: session.selectSubtitleTrack,
                     onClose: { dismiss() }

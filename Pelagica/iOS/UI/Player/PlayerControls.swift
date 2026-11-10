@@ -17,7 +17,7 @@ struct PlayerControls: View {
     @State private var doubleTapJumps = 0
 
     private enum TrackMenu {
-        case audio, subtitles
+        case versions, audio, subtitles
     }
 
     private var isShowingTracks: Bool { presentedTrackMenu != nil }
@@ -125,6 +125,10 @@ struct PlayerControls: View {
 
             Spacer()
 
+            if !session.versions.isEmpty {
+                trackMenuButton(.versions, systemImage: "film.stack")
+            }
+
             if session.audioStreams.count > 1 {
                 trackMenuButton(.audio, systemImage: "waveform")
             }
@@ -156,6 +160,16 @@ struct PlayerControls: View {
     @ViewBuilder
     private func trackList(for menu: TrackMenu) -> some View {
         switch menu {
+        case .versions:
+            List {
+                Section(i18n.t("item:video")) {
+                    ForEach(session.versions, id: \.id) { source in
+                        trackRow(source.versionTitle, isSelected: source.id == session.currentMediaSourceID) {
+                            session.selectVersion(source)
+                        }
+                    }
+                }
+            }
         case .audio:
             List {
                 Section(i18n.t("player:audioTracks")) {
