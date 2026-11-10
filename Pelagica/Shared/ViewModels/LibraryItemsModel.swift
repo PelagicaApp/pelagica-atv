@@ -137,8 +137,10 @@ final class LibraryItemsModel: ObservableObject {
             items.append(contentsOf: result.items ?? [])
             loadedQueryKey = requestedQueryKey
             totalCount = result.totalRecordCount ?? items.count
-        } catch is CancellationError {
         } catch {
+            guard !Task.isCancelled else { return }
+            if error is CancellationError { return }
+            if let urlError = error as? URLError, urlError.code == .cancelled { return }
             errorMessage = i18n.t("library:load_items_error")
         }
     }
