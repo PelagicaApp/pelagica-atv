@@ -288,7 +288,7 @@ final class HomeModel: ObservableObject {
             }
     }
 
-    private static let supportedLibraryCollectionTypes: Set<CollectionType> = [.movies, .tvshows, .boxsets]
+    private static let supportedLibraryCollectionTypes: Set<CollectionType> = [.movies, .tvshows, .boxsets, .musicvideos]
 
     private func fetchLibraries(client: JellyfinClient) async -> [BaseItemDto] {
         guard let userID = appState?.currentUser?.id else { return [] }
@@ -416,6 +416,7 @@ final class HomeModel: ObservableObject {
             .movies: [.movie],
             .tvshows: [.series],
             .boxsets: [.boxSet],
+            .musicvideos: [.musicVideo],
         ]
 
         let libraries = views.filter { view in

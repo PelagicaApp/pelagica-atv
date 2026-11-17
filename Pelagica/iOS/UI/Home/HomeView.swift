@@ -77,8 +77,8 @@ private struct HomeRowView: View {
             Shelf(title: row.title) {
                 ForEach(row.items.indices, id: \.self) { index in
                     let item = row.items[index]
-                    if useThumb {
-                        LandscapeCard(item: item, detailText: detailText(item))
+                    if useThumb || item.playsDirectly {
+                        LandscapeCard(item: item, detailText: detailText(item), playsOnTap: item.playsDirectly)
                     } else {
                         PosterCard(item: item, detailText: detailText(item))
                     }

@@ -110,6 +110,9 @@ final class LibraryItemsModel: ObservableObject {
             case .tvshows:
                 parameters.isRecursive = true
                 parameters.includeItemTypes = [.series]
+            case .musicvideos:
+                parameters.isRecursive = true
+                parameters.includeItemTypes = [.musicVideo]
             default:
                 parameters.isRecursive = false
             }

@@ -13,7 +13,7 @@ final class LibrariesModel: ObservableObject {
     @Published private(set) var libraries: [BaseItemDto] = []
     @Published private(set) var errorMessage: String?
 
-    private let supportedLibraryTypes: [CollectionType] = [.movies, .tvshows, .boxsets]
+    private let supportedLibraryTypes: [CollectionType] = [.movies, .tvshows, .boxsets, .musicvideos]
 
     func load(appState: AppState) async {
         guard let client = appState.client else { return }

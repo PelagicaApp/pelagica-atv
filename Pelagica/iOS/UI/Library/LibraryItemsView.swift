@@ -12,6 +12,7 @@ struct LibraryItemsView: View {
     let title: String
     let emptyMessage: String
     let isFilterable: Bool
+    var isLandscape = false
 
     @StateObject private var model: LibraryItemsModel
 
@@ -19,6 +20,7 @@ struct LibraryItemsView: View {
         title = library.name ?? i18n.t("item:unknown_library")
         emptyMessage = i18n.t("library:no_items_description")
         isFilterable = library.collectionType == .movies || library.collectionType == .tvshows
+        isLandscape = library.collectionType?.playsDirectly == true
         _model = StateObject(wrappedValue: LibraryItemsModel(query: .library(id: library.id, collectionType: library.collectionType)))
     }
 
@@ -38,7 +40,7 @@ struct LibraryItemsView: View {
 
     @Environment(\.horizontalSizeClass) private var sizeClass
 
-    private var columns: [GridItem] { CardMetrics.gridColumns(minimum: 104, spacing: 12, sizeClass) }
+    private var columns: [GridItem] { CardMetrics.gridColumns(minimum: isLandscape ? 160 : 104, spacing: 12, sizeClass) }
 
     var body: some View {
         ScrollView {
@@ -49,8 +51,14 @@ struct LibraryItemsView: View {
             } else {
                 LazyVGrid(columns: columns, alignment: .leading, spacing: 16) {
                     ForEach(model.items) { item in
-                        PosterCard(item: item, width: nil)
-                            .onAppear { model.loadMoreIfNeeded(current: item) }
+                        Group {
+                            if item.playsDirectly {
+                                LandscapeCard(item: item, detailText: year(of: item), playsOnTap: true, width: nil)
+                            } else {
+                                PosterCard(item: item, width: nil)
+                            }
+                        }
+                        .onAppear { model.loadMoreIfNeeded(current: item) }
                     }
                 }
                 .padding()
@@ -71,6 +79,10 @@ struct LibraryItemsView: View {
             model.bind(appState: appState)
             await model.reload()
         }
+    }
+
+    private func year(of item: BaseItemDto) -> String? {
+        item.premiereDate.map { String(Calendar.current.component(.year, from: $0)) }
     }
 
     private var sortMenu: some View {

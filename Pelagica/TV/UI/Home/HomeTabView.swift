@@ -122,8 +122,9 @@ struct HomeTabView: View {
         case .poster(let detailText, let useThumb, let autoPlayTrailers):
             HomeSectionRow(title: row.title) {
                 ForEach(row.items.indices, id: \.self) { index in
-                    ItemCard(item: row.items[index], detailText: detailText, useThumb: useThumb, autoPlayTrailer: autoPlayTrailers)
-                        .frame(width: useThumb ? 420 : 280)
+                    let item = row.items[index]
+                    ItemCard(item: item, detailText: detailText, useThumb: useThumb, autoPlayTrailer: autoPlayTrailers)
+                        .frame(width: useThumb || item.playsDirectly ? 420 : 280)
                 }
             }
 

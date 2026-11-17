@@ -64,10 +64,11 @@ struct LandscapeCard: View {
     var detailText: String?
     var playsOnTap = false
     var useSeriesImage = false
-    var width: CGFloat = 260
+    /// `nil` fills the available width, for grids.
+    var width: CGFloat? = 260
     var onTap: (() -> Void)?
 
-    private var scaledWidth: CGFloat { width * CardMetrics.landscapeScale(sizeClass) }
+    private var scaledWidth: CGFloat? { width.map { $0 * CardMetrics.landscapeScale(sizeClass) } }
 
     var body: some View {
         Group {
@@ -127,7 +128,7 @@ struct LandscapeCard: View {
     }
 
     private var imageURL: URL? {
-        let pixelWidth = Int((scaledWidth * displayScale).rounded())
+        let pixelWidth = Int(((scaledWidth ?? 480) * displayScale).rounded())
         let source = (useSeriesImage ? ItemImages.seriesLandscape(item) : nil) ?? ItemImages.landscape(item)
         return ItemImages.url(source, client: appState.client, width: pixelWidth, height: pixelWidth * 9 / 16)
     }

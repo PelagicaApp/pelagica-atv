@@ -20,9 +20,12 @@ enum ItemImages {
         return Source(itemID: id, type: .primary, tag: item.imageTags?["Primary"])
     }
 
-    /// Thumb, then backdrop, then the poster.
+    /// Thumb, then backdrop, then the poster. Music videos use their primary image, which is already a 16:9 frame.
     static func landscape(_ item: BaseItemDto) -> Source? {
         guard let id = item.id else { return nil }
+        if item.playsDirectly, item.imageTags?["Primary"] != nil {
+            return primary(item)
+        }
         if let thumbTag = item.imageTags?["Thumb"] {
             return Source(itemID: id, type: .thumb, tag: thumbTag)
         } else if let backdropTag = item.backdropImageTags?.first {

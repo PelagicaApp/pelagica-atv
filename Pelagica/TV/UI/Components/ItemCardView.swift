@@ -8,6 +8,7 @@ import SwiftUI
 
 struct ItemCard: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var navigationCoordinator: TabNavigationCoordinator
     @Environment(\.displayScale) private var displayScale
     let item: BaseItemDto
     var detailText: (BaseItemDto) -> String = { item in
@@ -20,14 +21,14 @@ struct ItemCard: View {
     var similarity: Double?
 
     private let cornerRadius: CGFloat = 16
-    private var posterAspectRatio: CGFloat { useThumb ? 16.0 / 9.0 : 2.0 / 3.0 }
+    private var posterAspectRatio: CGFloat { useThumb || item.playsDirectly ? 16.0 / 9.0 : 2.0 / 3.0 }
 
     @State private var measuredWidth: CGFloat?
     @FocusState private var isFocused: Bool
     
     var body: some View {
         VStack(alignment: .leading, spacing: 25) {
-            NavigationLink(value: ItemDetailRoute(item: item)) {
+            cardLink {
                 GeometryReader { proxy in
                     posterBody(size: proxy.size)
                         .onAppear { updateMeasuredWidth(proxy.size.width) }
@@ -64,6 +65,24 @@ struct ItemCard: View {
         }
     }
     
+    @ViewBuilder
+    private func cardLink<Label: View>(@ViewBuilder label: () -> Label) -> some View {
+        if item.playsDirectly {
+            Button {
+                navigationCoordinator.playbackTarget = PlaybackTarget(
+                    item: item,
+                    startTicks: item.userData?.playbackPositionTicks ?? 0
+                )
+            } label: {
+                label()
+            }
+        } else {
+            NavigationLink(value: ItemDetailRoute(item: item)) {
+                label()
+            }
+        }
+    }
+
     @ViewBuilder
     private func posterBody(size: CGSize) -> some View {
         ZStack {

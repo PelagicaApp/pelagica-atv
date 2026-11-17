@@ -12,6 +12,7 @@ struct LibraryItemsView: View {
     let title: String
     let emptyMessage: String
     let isFilterable: Bool
+    var isLandscape = false
 
     @StateObject private var model: LibraryItemsModel
 
@@ -20,6 +21,7 @@ struct LibraryItemsView: View {
         emptyMessage = i18n.t("library:no_items_description")
         _model = StateObject(wrappedValue: LibraryItemsModel(query: .library(id: library.id, collectionType: library.collectionType)))
         isFilterable = library.collectionType == .movies || library.collectionType == .tvshows
+        isLandscape = library.collectionType?.playsDirectly == true
     }
 
     init(genre: GenreRoute) {
@@ -36,7 +38,7 @@ struct LibraryItemsView: View {
         isFilterable = true
     }
 
-    private let columns = [GridItem(.adaptive(minimum: 280), spacing: 40)]
+    private var columns: [GridItem] { [GridItem(.adaptive(minimum: isLandscape ? 420 : 280), spacing: 40)] }
 
     var body: some View {
         ZStack {
@@ -73,7 +75,7 @@ struct LibraryItemsView: View {
                             if model.isLoadingMore {
                                 ForEach(0..<model.prefetchThreshold, id: \.self) { _ in
                                     SkeletonView()
-                                        .aspectRatio(2.0 / 3.0, contentMode: .fit)
+                                        .aspectRatio(isLandscape ? 16.0 / 9.0 : 2.0 / 3.0, contentMode: .fit)
                                         .clipShape(RoundedRectangle(cornerRadius: 16))
                                 }
                             }
