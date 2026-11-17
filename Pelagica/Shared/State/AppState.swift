@@ -105,11 +105,21 @@ final class AppState: ObservableObject {
 #endif
     }
     
+    private var clientName: String {
+#if os(tvOS)
+        "Pelagica tvOS"
+#elseif os(iOS)
+        UIDevice.current.userInterfaceIdiom == .pad ? "Pelagica iPadOS" : "Pelagica iOS"
+#else
+        "Pelagica"
+#endif
+    }
+
     private func makeConfiguration(url: URL, accessToken: String? = nil) -> JellyfinClient.Configuration {
         .init(
             url: url,
             accessToken: accessToken,
-            client: "Pelagica tvOS",
+            client: clientName,
             deviceName: deviceName,
             deviceID: deviceID,
             version: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
