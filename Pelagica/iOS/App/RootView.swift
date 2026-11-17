@@ -20,7 +20,9 @@ struct RootView: View {
                 AuthFlowView(initialServer: appState.reauthServer)
             }
         }
+        .remoteMessageOverlay()
         .environmentObject(appState)
+        .environmentObject(appState.remoteControl)
         .preferredColorScheme(.dark)
         .tint(.white)
         .task { await appState.restoreSession() }

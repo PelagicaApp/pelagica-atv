@@ -57,6 +57,8 @@ final class AppState: ObservableObject {
     /// Logs in to Seerr after a password sign-in
     private(set) var pendingSeerrLogin: Task<Void, Never>?
     
+    let remoteControl = RemoteControlService()
+
     private let keychain = KeychainStore()
     private let defaults = UserDefaults.standard
     
@@ -268,6 +270,7 @@ final class AppState: ObservableObject {
     
     /// Leaves the current profile signed in on the server, and returns to the profile picker.
     func switchProfile() {
+        remoteControl.disconnect()
         client = nil
         currentUser = nil
         serverName = nil
@@ -351,6 +354,7 @@ final class AppState: ObservableObject {
         activeProfile = profile
         isAddingProfile = false
         reauthServer = nil
+        remoteControl.connect(client: newClient)
     }
     
     private func persistProfiles() {

@@ -57,6 +57,7 @@ struct VideoPlayerView: View {
                     .tint(.white)
             }
         }
+        .remoteMessageOverlay()
         .onAppear { session.bind(appState: appState, subtitleStyleStore: subtitleStyleStore) }
         .onDisappear { session.end() }
         .onChange(of: session.isFinished) { _, isFinished in

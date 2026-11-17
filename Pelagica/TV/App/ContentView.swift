@@ -20,7 +20,9 @@ struct ContentView: View {
                 AuthFlowView(initialServer: appState.reauthServer)
             }
         }
+        .remoteMessageOverlay()
         .environmentObject(appState)
+        .environmentObject(appState.remoteControl)
         .preferredColorScheme(.dark)
         .task { await appState.restoreSession() }
         .onOpenURL { url in

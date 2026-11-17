@@ -65,6 +65,7 @@ struct PlayerView: View {
         .preferredColorScheme(.dark)
         .statusBarHidden()
         .persistentSystemOverlays(.hidden)
+        .remoteMessageOverlay()
         .onAppear { session.bind(appState: appState, subtitleStyleStore: subtitleStyleStore) }
         .onDisappear { session.end() }
         .onChange(of: session.isFinished) { _, isFinished in

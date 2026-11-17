@@ -445,8 +445,13 @@ final class VLCPlayerController: NSObject, ObservableObject {
         case .opening, .buffering:
             setBuffering(!player.isPlaying)
         case .playing:
+            let wasPlaying = isPlaying
             setBuffering(false)
             setPlaying(true)
+            // So the dashboard flips its play/pause button right away
+            if !wasPlaying {
+                onProgress?(currentSeconds, false)
+            }
             if !didApplyInitialTracks {
                 didApplyInitialTracks = true
                 if let pendingAudioStream { applyAudio(pendingAudioStream) }

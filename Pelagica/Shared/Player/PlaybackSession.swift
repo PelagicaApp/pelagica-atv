@@ -51,6 +51,7 @@ final class PlaybackSession: ObservableObject {
     func bind(appState: AppState, subtitleStyleStore: SubtitleStyleStore) {
         self.appState = appState
         self.subtitleStyleStore = subtitleStyleStore
+        appState.remoteControl.register(self)
         controller.onProgress = { [weak self] in self?.reportProgress(seconds: $0, isPaused: $1) }
         controller.onPlaybackEnded = { [weak self] in self?.handlePlaybackEnded() }
         controller.onPlaybackFailed = { [weak self] in self?.handlePlaybackFailed() }
@@ -81,8 +82,14 @@ final class PlaybackSession: ObservableObject {
 
     /// Call when the player goes away.
     func end() {
+        appState?.remoteControl.unregister(self)
         reportStopped(seconds: controller.currentSeconds)
         controller.stop()
+    }
+
+    /// Asks the view to dismiss, which ends the session.
+    func close() {
+        isFinished = true
     }
 
     // MARK: - Display
